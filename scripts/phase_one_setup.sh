@@ -37,7 +37,8 @@ sudo apt update
 sudo apt install -y autoconf automake build-essential bison flex texinfo \
     gperf libtool patchutils bc git cmake ninja-build \
     libglib2.0-dev libpixman-1-dev libslirp-dev \
-    libmpc-dev libmpfr-dev libgmp-dev zlib1g-dev libexpat-dev python3
+    libmpc-dev libmpfr-dev libgmp-dev zlib1g-dev libexpat-dev python3 \
+    doxygen doxygen-gui doxygen-latex doxygen-doc graphviz
 
 
 # RISCV Cross Toolchain

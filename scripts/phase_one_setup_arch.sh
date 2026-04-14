@@ -33,10 +33,11 @@ echo -e "\n-------------------------------------------------------"
 echo "Installing system dependencies..."
 echo -e "-------------------------------------------------------\n"
 sleep 1
-# Arch Linux uses pacman. base-devel includes gcc, make, etc.
+
 sudo pacman -Syu --needed --noconfirm \
     base-devel multilib-devel git cmake ninja \
-    glib2 pixman libslirp gmp mpc mpfr expat zlib python
+    glib2 pixman libslirp gmp mpc mpfr expat zlib python \
+    doxygen graphviz qt5-base texlive-basic texlive-latex
 
 
 # RISCV Cross Toolchain
