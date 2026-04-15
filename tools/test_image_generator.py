@@ -15,10 +15,22 @@ class TestImageGenerator:
     
     def circle(self, top_left=(50, 50), bottom_right=(200, 200)):
         img = self.background.copy()
+        center_x = (top_left[0] + bottom_right[0]) // 2
+        center_y = (top_left[1] + bottom_right[1]) // 2
+        radius = (bottom_right[0] - top_left[0]) // 2
+        Y, X = np.ogrid[:self.size, :self.size]
+        mask = (X - center_x)**2 + (Y - center_y)**2 <= radius**2
+        img[mask] = 255
         return img
     
     def diagonal_edge(self, top_left=(50, 50), bottom_right=(200, 200)):
         img = self.background.copy()
+        y_start, y_end = top_left[1], bottom_right[1]
+        x_start, x_end = top_left[0], bottom_right[0]
+        for y in range(y_start, y_end):
+            for x in range(x_start, x_end):
+                if (x - x_start) > (y - y_start):
+                    img[y, x] = 255
         return img
 
 
