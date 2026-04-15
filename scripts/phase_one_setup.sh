@@ -225,8 +225,4 @@ echo -e "\n-------------------------------------------------------"
 echo "DONE!"
 echo "Workspace: ~/$PROJECT_TITLE"
 echo "Run 'source ~/.bashrc' to enable the tools."
-<<<<<<< HEAD
 echo -e "-------------------------------------------------------\n"
-=======
-echo "-------------------------------------------------------"
->>>>>>> 278457a (build: overhaul build system for dual-target RVV development)
