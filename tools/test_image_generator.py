@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -20,26 +21,30 @@ class TestImageGenerator:
         img = self.background.copy()
         return img
 
-H, W = 512, 512
-gen = TestImageGenerator(size=H)
 
-script_path = os.path.dirname(os.path.abspath(__file__))
-assets_path = os.path.abspath(os.path.join(script_path, '../assets'))
+if __name__ == "__main__":
+    try:
+        W = int(sys.argv[1]) if len(sys.argv) > 1 else 512
+        H = int(sys.argv[2]) if len(sys.argv) > 2 else W
+    except:
+        print("Invalid dimensions provided. Usage: python script.py [width] [height]")
+        sys.exit(1)
 
-if not os.path.exists(assets_path):
-    os.makedirs(assets_path)
+    gen = TestImageGenerator(size=max(H,W))
 
-images = {
-    "rect": gen.rectangle(), 
-    "circ": gen.circle(), 
-    "diag": gen.diagonal_edge(), 
-}
+    script_path = os.path.dirname(os.path.abspath(__file__))
+    assets_path = os.path.abspath(os.path.join(script_path, '../assets'))
 
-loaded_data = {}
-for filename, data in images.items():
-    filepath = os.path.join(assets_path, f"{filename}.raw")
-    data.tofile(filepath)
-    loaded_data[filename] = np.fromfile(os.path.join(assets_path, 'rect.raw'), dtype=np.uint8).reshape(H, W)
+    if not os.path.exists(assets_path):
+        os.makedirs(assets_path)
 
-plt.imshow(loaded_data["rect"], cmap='gray')
-plt.show()
+    images = {
+        "rect": gen.rectangle()[:H, :W],
+        "circ": gen.circle()[:H, :W], 
+        "diag": gen.diagonal_edge()[:H, :W]
+    }
+
+    for filename, data in images.items():
+        filepath = os.path.join(assets_path, f"{filename}.raw")
+        data.tofile(filepath)
+        check = np.fromfile(filepath, dtype=np.uint8).reshape(H, W)
