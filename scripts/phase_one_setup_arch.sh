@@ -219,8 +219,8 @@ list-tests:
 	@ls tests/*.cpp | xargs -n 1 basename | sed 's/\.cpp//'
 EOF
 
-echo "-------------------------------------------------------"
+echo -e "\n-------------------------------------------------------"
 echo "DONE!"
 echo "Workspace: ~/$PROJECT_TITLE"
 echo "Run 'source ~/.bashrc' to enable the tools."
-echo "-------------------------------------------------------"
+echo -e "-------------------------------------------------------\n"

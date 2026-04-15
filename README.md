@@ -27,7 +27,7 @@ This project implements a high-performance **Canny edge detection** pipeline. Th
 ├── build/              # Build artifacts (host/ for x86, target/ for RISC-V)
 ├── include/            # Header files (.hpp)
 ├── src/                # Implementation files (.cpp)
-├── scripts/            # Environment setup (Arch/Ubuntu) and automation
+├── scripts/            # Automated scripts
 ├── tests/              # GoogleTest (host) and RVV equivalence tests
 ├── tools/              # Custom profiling or visualization tools
 ├── Makefile            # Dual-target build system

@@ -151,6 +151,7 @@ cmake .. -DCMAKE_INSTALL_PREFIX="$GTEST_INSTALL_DIR"
 echo -e "\n-------------------------------------------------------"
 echo "Building and Installing Google Test..."
 echo -e "-------------------------------------------------------\n"
+sleep 1
 make -j"$JOBS"
 make install
 
@@ -220,8 +221,8 @@ list-tests:
 	@ls tests/*.cpp | xargs -n 1 basename | sed 's/\.cpp//'
 EOF
 
-echo "-------------------------------------------------------"
+echo -e "\n-------------------------------------------------------"
 echo "DONE!"
 echo "Workspace: ~/$PROJECT_TITLE"
 echo "Run 'source ~/.bashrc' to enable the tools."
-echo "-------------------------------------------------------"
+echo -e "-------------------------------------------------------\n"
