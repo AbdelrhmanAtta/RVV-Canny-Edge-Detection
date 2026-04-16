@@ -9,6 +9,13 @@ def show_raw(path, w=512, h=512):
     plt.title(f"Raw Image: {os.path.basename(path)}")
     plt.show()
 
-if name == "main":
-    image_path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(file)), '../assets')), sys.argv[1])
-    show_raw(image_path, int(sys.argv[2]), int(sys.argv[3]))
+if __name__ == "__main__":
+    try:
+        image_width = int(sys.argv[2]) if len(sys.argv) > 2 else 512
+        image_height = int(sys.argv[3]) if len(sys.argv) > 3 else image_width
+    except:
+        print("Invalid dimensions provided. Usage: python script.py [width] [height]")
+        sys.exit(1)
+
+    image_path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../assets')), sys.argv[1])
+    show_raw(image_path, int(image_width), int(image_height))

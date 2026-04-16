@@ -36,27 +36,24 @@ class TestImageGenerator:
 
 if __name__ == "__main__":
     try:
-        W = int(sys.argv[1]) if len(sys.argv) > 1 else 512
-        H = int(sys.argv[2]) if len(sys.argv) > 2 else W
+        image_width = int(sys.argv[1]) if len(sys.argv) > 1 else 512
+        image_height = int(sys.argv[2]) if len(sys.argv) > 2 else image_width
     except:
         print("Invalid dimensions provided. Usage: python script.py [width] [height]")
         sys.exit(1)
 
-    gen = TestImageGenerator(size=max(H,W))
+    gen = TestImageGenerator(size=max(image_height,image_width))
 
-    script_path = os.path.dirname(os.path.abspath(__file__))
-    assets_path = os.path.abspath(os.path.join(script_path, '../assets'))
-
+    assets_path = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../assets'))
     if not os.path.exists(assets_path):
         os.makedirs(assets_path)
 
     images = {
-        "rect": gen.rectangle()[:H, :W],
-        "circ": gen.circle()[:H, :W], 
-        "diag": gen.diagonal_edge()[:H, :W]
+        "rect": gen.rectangle()[:image_height, :image_width],
+        "circ": gen.circle()[:image_height, :image_width], 
+        "diag": gen.diagonal_edge()[:image_height, :image_width]
     }
 
     for filename, data in images.items():
         filepath = os.path.join(assets_path, f"{filename}.raw")
         data.tofile(filepath)
-        check = np.fromfile(filepath, dtype=np.uint8).reshape(H, W)

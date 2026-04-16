@@ -16,7 +16,7 @@ sleep 3
 
 # Config
 VENV_DIR=".venv"
-PACKAGES="numpy matplotlib"
+PACKAGES="numpy matplotlib PyQt5"
 
 # Check for python3-venv
 if ! dpkg -s python3-venv >/dev/null 2>&1; then
