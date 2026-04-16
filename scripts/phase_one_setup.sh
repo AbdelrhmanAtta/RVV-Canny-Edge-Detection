@@ -37,29 +37,39 @@ sudo apt update
 sudo apt install -y autoconf automake build-essential bison flex texinfo \
     gperf libtool patchutils bc git cmake ninja-build \
     libglib2.0-dev libpixman-1-dev libslirp-dev \
-    libmpc-dev libmpfr-dev libgmp-dev zlib1g-dev libexpat-dev python3 \
-    python3-venv doxygen doxygen-gui doxygen-latex doxygen-doc graphviz
-    libpulse0 libgtk-3-0 libasound2 libdbus-1-3 \
+    libmpc-dev libmpfr-dev libgmp-dev zlib1g-dev libexpat1-dev python3 \
+    python3-venv doxygen doxygen-gui doxygen-latex doxygen-doc graphviz \
+    libpulse0 libgtk-3-0t64 libasound2t64 libdbus-1-3 \
     libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
     libxcb-render-util0 libxcb-xinerama0 libxcb-xinput0 libxcb-xfixes0 \
-    libqt5gui5
+    libqt5gui5t64
 
 
 # RISCV Cross Toolchain
-if [ ! -d "$HOME/riscv-gnu-toolchain" ]; then
+TARGET_CLONE_DIR="$HOME/riscv-gnu-toolchain"
+
+# Force delete if it's not a healthy git repo
+if [ -d "$TARGET_CLONE_DIR" ]; then
+    if [ ! -d "$TARGET_CLONE_DIR/.git" ]; then
+        echo "Found a broken clone at $TARGET_CLONE_DIR, removing it..."
+        rm -rf "$TARGET_CLONE_DIR"
+    fi
+fi
+
+if [ ! -d "$TARGET_CLONE_DIR" ]; then
     echo -e "\n-------------------------------------------------------"
     echo "Cloning RISC-V GNU toolchain..."
     echo -e "-------------------------------------------------------\n"
-    sleep 1
-    git clone --recursive --depth 1 https://github.com/riscv-collab/riscv-gnu-toolchain
+    git clone --recursive --depth 1 https://github.com/riscv-collab/riscv-gnu-toolchain "$TARGET_CLONE_DIR"
 else
     echo -e "\n-------------------------------------------------------"
     echo "RISC-V GNU toolchain already exists, skipping clone."
     echo -e "-------------------------------------------------------\n"
-    sleep 1
 fi
 
-cd "$HOME/riscv-gnu-toolchain"
+# Use the explicit variable to change directory
+cd "$TARGET_CLONE_DIR" || { echo "Failed to enter $TARGET_CLONE_DIR"; exit 1; }
+
 echo -e "\n-------------------------------------------------------"
 echo "Configuring RISC-V GNU toolchain..."
 echo -e "-------------------------------------------------------\n"
