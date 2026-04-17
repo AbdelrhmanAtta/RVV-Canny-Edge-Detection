@@ -1,10 +1,15 @@
 HOST_CXX = g++
 RV_CXX   = riscv64-unknown-elf-g++
 GTEST    = $(HOME)/googletest-installed
+SRCS = src/main.cpp src/io.cpp
 
 
-RV_FLAGS   = -march=rv64gcv -O3 -static
-HOST_FLAGS = -O3 -I$(GTEST)/include -L$(GTEST)/lib -lgtest -lgtest_main -lpthread
+RV_FLAGS   = -std=c++20 -march=rv64gcv -O3 -static
+HOST_FLAGS = -std=c++20 -O3 -I$(GTEST)/include -L$(GTEST)/lib -lgtest -lgtest_main -lpthread
+
+INPUT  ?= assets/rect.raw
+WIDTH  ?= 512
+HEIGHT ?= 512
 
 # Targets
 .PHONY: all clean run test run-test list-tests
@@ -13,9 +18,9 @@ all: canny_rv test
 
 
 # Main Canny Pipeline Build
-canny_rv: src/main.cpp
+canny_rv: $(SRCS)
 	@mkdir -p ./build/target/release
-	$(RV_CXX) $(RV_FLAGS) src/main.cpp -o build/target/release/canny_rv.elf
+	$(RV_CXX) $(RV_FLAGS) $(SRCS) -o build/target/release/canny_rv.elf
 
 # Standard Host Testing (GoogleTest)
 test: tests/host_tests.cpp
@@ -25,7 +30,7 @@ test: tests/host_tests.cpp
 
 # Run the main pipeline
 run: canny_rv
-	qemu-riscv64 -cpu max,vlen=512 build/target/release/canny_rv.elf
+	qemu-riscv64 -cpu max,vlen=512 ./build/target/release/canny_rv.elf $(shell pwd)/$(INPUT) $(WIDTH) $(HEIGHT)
 
 # Cleanup build artifacts
 clean:
