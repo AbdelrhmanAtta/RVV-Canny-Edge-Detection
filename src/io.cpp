@@ -9,11 +9,11 @@ uint8_t* IO_LoadRaw(const std::string& fileName, uint32_t imageWidth, uint32_t i
     if(!imageBuffer)
     {
         std::cerr << "[IO FAILURE] Memory Allocation error while loading: " << fileName << std::endl;
-        std::free(imageBuffer);
         return nullptr;
     }
 
-    std::ifstream file(fileName, std::ios::binary);
+    std::string filePath = std::string("./assets/") + fileName;
+    std::ifstream file(filePath, std::ios::binary);
     if(!file)
     {
         std::cerr << "[IO FAILURE] File access error while loading: " << fileName << std::endl;
@@ -37,7 +37,8 @@ void IO_SaveRaw(const std::string& fileName, uint8_t* imageBuffer,uint32_t image
     }
     size_t imageSize = static_cast<size_t>(imageWidth)*imageHeight;
 
-    std::ofstream file(fileName, std::ios::binary);
+    std::string filePath = std::string("./assets/") + fileName;
+    std::ofstream file(filePath, std::ios::binary);
     if(!file)
     {
         std::cerr << "[IO FAILURE] File access error while saving: " << fileName << std::endl;
