@@ -1,6 +1,10 @@
 var searchData=
 [
-  ['technical_20stack_0',['Technical Stack',['../md_README.html#autotoc_md4',1,'']]],
-  ['the_20big_20picture_20workflow_1',['The &quot;Big Picture&quot; Workflow',['../md_README.html#autotoc_md3',1,'']]],
-  ['toolchain_20emulation_20workflow_2',['2. Toolchain &amp; Emulation Workflow',['../md_README.html#autotoc_md8',1,'']]]
+  ['setup_0',['Environment Setup',['../md_README.html#autotoc_md17',1,'']]],
+  ['software_1',['Digital Electronics Context (Hardware meets Software)',['../md_README.html#autotoc_md12',1,'']]],
+  ['stack_2',['Technical Stack',['../md_README.html#autotoc_md4',1,'']]],
+  ['stages_3',['Pipeline Stages',['../md_README.html#autotoc_md2',1,'']]],
+  ['started_4',['Getting Started',['../md_README.html#autotoc_md16',1,'']]],
+  ['structure_5',['Project Structure',['../md_README.html#autotoc_md14',1,'']]],
+  ['system_20makefile_6',['Build System (Makefile)',['../md_README.html#autotoc_md19',1,'']]]
 ];
