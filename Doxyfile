@@ -1,38 +1,55 @@
+# --- Project Information ---
 PROJECT_NAME           = "RVV Canny Edge Detection"
 PROJECT_NUMBER         = 1.0
 OUTPUT_DIRECTORY       = .
 CREATE_SUBDIRS         = NO
 ALLOW_UNICODE_NAMES    = YES
 
-# --- Input ---
+# --- Input Configuration ---
 INPUT                  = README.md inc src
 RECURSIVE              = YES
 FILE_PATTERNS          = *.cpp *.hpp *.h *.c *.md
 EXCLUDE                = build .venv tests scripts
-USE_MDRIP              = YES
-MAINPAGE_LOG           = README.md
 
-# --- Modern UI (Doxygen Awesome) ---
-GENERATE_HTML          = YES
-HTML_OUTPUT            = html
-HTML_FILE_EXTENSION    = .html
-# Add these to HTML_EXTRA_STYLESHEET (space separated)
-HTML_EXTRA_STYLESHEET  = external/doxygen-awesome-css/doxygen-awesome.css \
-                         external/doxygen-awesome-css/doxygen-awesome-sidebar-only.css
-HTML_EXTRA_FILES       = external/doxygen-awesome-css/doxygen-awesome-darkmode-toggle.js
-HTML_HEADER            = header.html
-HTML_COLORSTYLE        = TOGGLE 
-GENERATE_TREEVIEW      = YES    
-INTERACTIVE_SVG        = YES
+# --- Main Page Settings (Fixed) ---
+USE_MDFILE_AS_MAINPAGE = README.md
 
-# --- Extraction & Graphs ---
+# --- Extraction Settings ---
 EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+
+# --- Build Settings ---
+JAVADOC_AUTOBRIEF      = YES
+OPTIMIZE_OUTPUT_FOR_C  = NO
+NUM_PROC_THREADS       = 0
+
+# --- Diagram Generation (Graphviz) ---
 HAVE_DOT               = YES
 CALL_GRAPH             = YES
 CALLER_GRAPH           = YES
+DOT_NUM_THREADS        = 4
 DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
 DOT_PATH               = /usr/bin/dot
+
+# --- HTML Output Settings (Doxygen Awesome) ---
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+HTML_FILE_EXTENSION    = .html
+HTML_COLORSTYLE        = TOGGLE
+GENERATE_TREEVIEW      = YES
+FULL_SIDEBAR           = YES
+HTML_EXTRA_STYLESHEET  = external/doxygen-awesome-css/doxygen-awesome.css
 
 # --- Math Support ---
 USE_MATHJAX            = YES
 MATHJAX_FORMAT         = HTML-CSS
+MATHJAX_RELPATH        = 
+
+# --- Source Browsing ---
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES

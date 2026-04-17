@@ -11,13 +11,16 @@ permissions:
 
 jobs:
   deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive  # Ensures the theme is actually downloaded
-          fetch-depth: 0         # Gets all history for correct timestamps
+          submodules: recursive
+          fetch-depth: 0
 
       - name: Install Doxygen & Graphviz
         run: |
@@ -25,9 +28,10 @@ jobs:
           sudo apt-get install -y doxygen graphviz
 
       - name: Generate Documentation
-        run: |
-          # This will show us exactly where Doxygen fails
-          doxygen Doxyfile 
+        run: doxygen Doxyfile
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
@@ -35,4 +39,5 @@ jobs:
           path: './html'
 
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
