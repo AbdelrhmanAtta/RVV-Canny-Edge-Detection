@@ -28,21 +28,45 @@ echo -e "-------------------------------------------------------\n"
 sleep 3
 
 
+# OS Detection
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    OS=$ID
+else
+    echo "Unable to detect OS from /etc/os-release"
+    exit 1
+fi
+
+
 # System Dependencies
 echo -e "\n-------------------------------------------------------"
 echo "Installing system dependencies..."
 echo -e "-------------------------------------------------------\n"
 sleep 1
-sudo apt update
-sudo apt install -y autoconf automake build-essential bison flex texinfo \
-    gperf libtool patchutils bc git cmake ninja-build \
-    libglib2.0-dev libpixman-1-dev libslirp-dev \
-    libmpc-dev libmpfr-dev libgmp-dev zlib1g-dev libexpat1-dev python3 \
-    python3-venv doxygen doxygen-gui doxygen-latex doxygen-doc graphviz \
-    libpulse0 libgtk-3-0t64 libasound2t64 libdbus-1-3 \
-    libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
-    libxcb-render-util0 libxcb-xinerama0 libxcb-xinput0 libxcb-xfixes0 \
-    libqt5gui5t64
+
+if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ] || [ "$OS" = "pop" ]; then
+    sudo apt update
+    sudo apt install -y autoconf automake build-essential bison flex texinfo \
+        gperf libtool patchutils bc git cmake ninja-build \
+        libglib2.0-dev libpixman-1-dev libslirp-dev \
+        libmpc-dev libmpfr-dev libgmp-dev zlib1g-dev libexpat1-dev python3 \
+        python3-venv doxygen doxygen-gui doxygen-latex doxygen-doc graphviz \
+        libpulse0 libgtk-3-0t64 libasound2t64 libdbus-1-3 \
+        libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+        libxcb-render-util0 libxcb-xinerama0 libxcb-xinput0 libxcb-xfixes0 \
+        libqt5gui5t64 riscv64-linux-gnu-gcc riscv64-linux-gnu-binutils \
+        riscv64-linux-gnu-glibc
+elif [ "$OS" = "arch" ] || [ "$OS" = "manjaro" ]; then
+    sudo pacman -Syu --needed --noconfirm \
+        base-devel multilib-devel git cmake ninja \
+        glib2 pixman libslirp gmp mpc mpfr expat zlib python \
+        doxygen graphviz qt5-base texlive-basic texlive-latex \
+        riscv64-linux-gnu-gcc riscv64-linux-gnu-binutils \
+        riscv64-linux-gnu-glibc
+else
+    echo "Unsupported OS: $OS"
+    exit 1
+fi
 
 
 # RISCV Cross Toolchain
@@ -60,11 +84,13 @@ if [ ! -d "$TARGET_CLONE_DIR" ]; then
     echo -e "\n-------------------------------------------------------"
     echo "Cloning RISC-V GNU toolchain..."
     echo -e "-------------------------------------------------------\n"
+    sleep 1
     git clone --recursive --depth 1 --shallow-submodules https://github.com/riscv-collab/riscv-gnu-toolchain "$TARGET_CLONE_DIR"
 else
     echo -e "\n-------------------------------------------------------"
     echo "RISC-V GNU toolchain already exists, skipping clone."
     echo -e "-------------------------------------------------------\n"
+    sleep 1
     cd "$TARGET_CLONE_DIR" && git submodule update --init --recursive --depth 1
 fi
 
@@ -81,7 +107,12 @@ echo -e "\n-------------------------------------------------------"
 echo -e "Building RISC-V GNU toolchain with $JOBS jobs...\nThis may take a while, study fields till its done :)"
 echo -e "-------------------------------------------------------\n"
 sleep 3
-make newlib -j"$JOBS"
+
+if [ "$OS" = "arch" ] || [ "$OS" = "manjaro" ]; then
+    make -j"$JOBS"
+else
+    make newlib -j"$JOBS"
+fi
 
 
 # Add toolchain path in .bashrc
@@ -99,7 +130,13 @@ else
     sleep 1
 fi
 
-if "$TOOLCHAIN_DIR/bin/riscv64-unknown-elf-g++" --version; then
+if [ "$OS" = "arch" ] || [ "$OS" = "manjaro" ]; then
+    COMPILER_TEST="$TOOLCHAIN_DIR/bin/riscv64-unknown-elf-gcc"
+else
+    COMPILER_TEST="$TOOLCHAIN_DIR/bin/riscv64-unknown-elf-g++"
+fi
+
+if "$COMPILER_TEST" --version; then
     echo -e "\n-------------------------------------------------------"
     echo "SUCCESS: RISC-V Toolchain is operational"
     echo -e "-------------------------------------------------------\n"
@@ -185,56 +222,6 @@ mkdir -p "$HOME/$PROJECT_TITLE/tools"
 mkdir -p "$HOME/$PROJECT_TITLE/build/host"
 mkdir -p "$HOME/$PROJECT_TITLE/build/target"
 
-cat <<'EOF' > "$HOME/$PROJECT_TITLE/Makefile"
-HOST_CXX = g++
-RV_CXX   = riscv64-unknown-elf-g++
-GTEST    = $(HOME)/googletest-installed
-
-
-RV_FLAGS   = -march=rv64gcv -O3 -static
-HOST_FLAGS = -O3 -I$(GTEST)/include -L$(GTEST)/lib -lgtest -lgtest_main -lpthread
-
-# Targets
-.PHONY: all clean run test run-test list-tests
-
-all: canny_rv test
-
-
-# Main Canny Pipeline Build
-canny_rv: src/main.cpp
-    @mkdir -p ./build/target/release
-    $(RV_CXX) $(RV_FLAGS) src/main.cpp -o build/target/release/canny_rv.elf
-
-# Standard Host Testing (GoogleTest)
-test: tests/host_tests.cpp
-    @mkdir -p ./build/host/debug
-    $(HOST_CXX) -DHOST_MODE tests/host_tests.cpp $(HOST_FLAGS) -o build/host/debug/unit_tests
-    ./build/host/debug/unit_tests
-
-# Run the main pipeline
-run: canny_rv
-    qemu-riscv64 -cpu max,vlen=512 build/target/release/canny_rv.elf
-
-# Cleanup build artifacts
-clean:
-    rm -rf build/*
-
-
-# AUTOMATIC PATTERN RULES FOR QUICK TESTING
-
-# Compiles any .cpp in tests/ to an .elf in build/target/
-build/target/debug/%.elf: tests/%.cpp
-    @mkdir -p ./build/target/debug
-    $(RV_CXX) $(RV_FLAGS) $< -o $@
-
-# Run any test by name: make run-test NAME=sanity
-run-test: build/target/debug/$(NAME).elf
-    qemu-riscv64 -cpu max,vlen=512 build/target/debug/$(NAME).elf
-
-# Utility to see what you can run
-list-tests:
-    @ls tests/*.cpp | xargs -n 1 basename | sed 's/\.cpp//'
-EOF
 
 echo -e "\n-------------------------------------------------------"
 echo "DONE!"

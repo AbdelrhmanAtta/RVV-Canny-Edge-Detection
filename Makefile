@@ -3,8 +3,8 @@ RV_CXX   = riscv64-linux-gnu-g++
 GTEST    = $(HOME)/googletest-installed
 SRCS	 = $(wildcard src/*.cpp)
 
-RV_FLAGS = -std=c++20 -march=rv64gcv -O3 -static -Iinclude
-HOST_FLAGS = -std=c++20 -O3 -I$(GTEST)/include -L$(GTEST)/lib -lgtest -lgtest_main -lpthread
+RV_FLAGS = -std=c++20 -march=rv64gcv -O3 -static -Iinc
+HOST_FLAGS = -std=c++20 -O3 -I$(GTEST)/inc -L$(GTEST)/lib -lgtest -lgtest_main -lpthread
 
 
 # Targets
@@ -26,7 +26,7 @@ test: tests/host_tests.cpp
 
 # Run the main pipeline
 run: canny_rv
-	qemu-riscv64 -cpu max,vlen=512 ./build/target/release/canny_rv.elf $(shell pwd)/$(INPUT) $(WIDTH) $(HEIGHT)
+	qemu-riscv64 -cpu max,vlen=512 ./build/target/release/canny_rv.elf
 
 # Cleanup build artifacts
 clean:
