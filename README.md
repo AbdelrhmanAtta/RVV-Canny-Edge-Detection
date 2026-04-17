@@ -38,7 +38,8 @@ This diagram breaks down the core skills required to master this project, mappin
 ### 2. Toolchain & Emulation Workflow
 This visualization shows how the dual-target workflow connects your host machine to the RISC-V emulation environment, detailing the path from source code to functional correctness and performance profiling.
 
-<img width="1408" height="768" alt="Gemini_Generated_Image_bmyjxbmyjxbmyjxb (1)" src="https://github.com/user-attachments/assets/1ccbdf4e-b255-42c4-93f9-ec94f4061219" />
+<img width="1380" height="752" alt="Gemini_Generated_Image_6ov3qr6ov3qr6ov3" src="https://github.com/user-attachments/assets/27a997f9-5db9-4e65-8d5e-502c09896a57" />
+
 
 
 ---
@@ -90,6 +91,11 @@ The setup process is fully automated for Ubuntu 24.04 & Arch Linux users.
 3. **QEMU User-Mode:** `qemu-riscv64` for vector emulation.
 4. **GoogleTest:** Native Host Support for logic validation.
 5. **Project Workspace:** Initializing the professional folder hierarchy.
+
+Some of the tools in the setup runs only on Linux; thus, for Windows OS users WSL2 (Windows Subsystem for Linux) with Ubuntu 24.04 is needed. WSL2 provides a full Linux kernel inside Windows and is the standard approach used in industry for cross platform embedded development.
+
+<img width="1408" height="768" alt="Gemini_Generated_Image_198pgn198pgn198p" src="https://github.com/user-attachments/assets/2523c1cb-5f8b-4927-b18c-31960bef8a6e" />
+
 
 **Run in terminal:**
 ```bash
