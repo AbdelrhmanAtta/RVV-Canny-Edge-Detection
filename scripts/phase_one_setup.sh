@@ -60,11 +60,12 @@ if [ ! -d "$TARGET_CLONE_DIR" ]; then
     echo -e "\n-------------------------------------------------------"
     echo "Cloning RISC-V GNU toolchain..."
     echo -e "-------------------------------------------------------\n"
-    git clone --recursive --depth 1 https://github.com/riscv-collab/riscv-gnu-toolchain "$TARGET_CLONE_DIR"
+    git clone --recursive --depth 1 --shallow-submodules https://github.com/riscv-collab/riscv-gnu-toolchain "$TARGET_CLONE_DIR"
 else
     echo -e "\n-------------------------------------------------------"
     echo "RISC-V GNU toolchain already exists, skipping clone."
     echo -e "-------------------------------------------------------\n"
+    cd "$TARGET_CLONE_DIR" && git submodule update --init --recursive --depth 1
 fi
 
 # Use the explicit variable to change directory
@@ -80,7 +81,7 @@ echo -e "\n-------------------------------------------------------"
 echo -e "Building RISC-V GNU toolchain with $JOBS jobs...\nThis may take a while, study fields till its done :)"
 echo -e "-------------------------------------------------------\n"
 sleep 3
-make -j"$JOBS"
+make newlib -j"$JOBS"
 
 
 # Add toolchain path in .bashrc
@@ -98,7 +99,7 @@ else
     sleep 1
 fi
 
-if "$TOOLCHAIN_DIR/bin/riscv64-unknown-elf-gcc" --version; then
+if "$TOOLCHAIN_DIR/bin/riscv64-unknown-elf-g++" --version; then
     echo -e "\n-------------------------------------------------------"
     echo "SUCCESS: RISC-V Toolchain is operational"
     echo -e "-------------------------------------------------------\n"
@@ -201,38 +202,38 @@ all: canny_rv test
 
 # Main Canny Pipeline Build
 canny_rv: src/main.cpp
-	@mkdir -p ./build/target/release
-	$(RV_CXX) $(RV_FLAGS) src/main.cpp -o build/target/release/canny_rv.elf
+    @mkdir -p ./build/target/release
+    $(RV_CXX) $(RV_FLAGS) src/main.cpp -o build/target/release/canny_rv.elf
 
 # Standard Host Testing (GoogleTest)
 test: tests/host_tests.cpp
-	@mkdir -p ./build/host/debug
-	$(HOST_CXX) -DHOST_MODE tests/host_tests.cpp $(HOST_FLAGS) -o build/host/debug/unit_tests
-	./build/host/debug/unit_tests
+    @mkdir -p ./build/host/debug
+    $(HOST_CXX) -DHOST_MODE tests/host_tests.cpp $(HOST_FLAGS) -o build/host/debug/unit_tests
+    ./build/host/debug/unit_tests
 
 # Run the main pipeline
 run: canny_rv
-	qemu-riscv64 -cpu max,vlen=512 build/target/release/canny_rv.elf
+    qemu-riscv64 -cpu max,vlen=512 build/target/release/canny_rv.elf
 
 # Cleanup build artifacts
 clean:
-	rm -rf build/*
+    rm -rf build/*
 
 
 # AUTOMATIC PATTERN RULES FOR QUICK TESTING
 
 # Compiles any .cpp in tests/ to an .elf in build/target/
 build/target/debug/%.elf: tests/%.cpp
-	@mkdir -p ./build/target/debug
-	$(RV_CXX) $(RV_FLAGS) $< -o $@
+    @mkdir -p ./build/target/debug
+    $(RV_CXX) $(RV_FLAGS) $< -o $@
 
 # Run any test by name: make run-test NAME=sanity
 run-test: build/target/debug/$(NAME).elf
-	qemu-riscv64 -cpu max,vlen=512 build/target/debug/$(NAME).elf
+    qemu-riscv64 -cpu max,vlen=512 build/target/debug/$(NAME).elf
 
 # Utility to see what you can run
 list-tests:
-	@ls tests/*.cpp | xargs -n 1 basename | sed 's/\.cpp//'
+    @ls tests/*.cpp | xargs -n 1 basename | sed 's/\.cpp//'
 EOF
 
 echo -e "\n-------------------------------------------------------"
