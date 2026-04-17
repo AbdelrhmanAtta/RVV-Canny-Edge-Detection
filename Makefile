@@ -1,15 +1,11 @@
 HOST_CXX = g++
-RV_CXX   = riscv64-unknown-elf-g++
+RV_CXX   = riscv64-linux-gnu-g++
 GTEST    = $(HOME)/googletest-installed
-SRCS = src/main.cpp src/io.cpp
+SRCS	 = $(wildcard src/*.cpp)
 
-
-RV_FLAGS   = -std=c++20 -march=rv64gcv -O3 -static
+RV_FLAGS = -std=c++20 -march=rv64gcv -O3 -static -Iinclude
 HOST_FLAGS = -std=c++20 -O3 -I$(GTEST)/include -L$(GTEST)/lib -lgtest -lgtest_main -lpthread
 
-INPUT  ?= assets/rect.raw
-WIDTH  ?= 512
-HEIGHT ?= 512
 
 # Targets
 .PHONY: all clean run test run-test list-tests
@@ -51,3 +47,4 @@ run-test: build/target/debug/$(NAME).elf
 # Utility to see what you can run
 list-tests:
 	@ls tests/*.cpp | xargs -n 1 basename | sed 's/\.cpp//'
+
