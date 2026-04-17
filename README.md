@@ -10,6 +10,13 @@ This project implements a high-performance **Canny edge detection** pipeline. Th
 3. **Magnitude & Direction:** $L_1/L_2$ Norms and 4-way direction quantization.
 4. **NMS & Hysteresis:** (Bonus) Non-Maximum Suppression and Double Thresholding.
 
+### The "Big Picture" Workflow
+This project simulates a real embedded engineering workflow. The focus is an **optimization journey**:
+1. **Baseline**: Write a clean, portable scalar C++ implementation.
+2. **Measurement**: Profile the code and analyze compiler optimizations (from `-O0` to `-Ofast`) to identify bottlenecks.
+3. **Optimization**: Rewrite the identified "hot" kernels using RISC-V Vector (RVV) intrinsics.
+4. **Verification**: Prove with data that the optimized vector code produces the exact same output as the C++ baseline across different Vector Lengths (VLEN).
+
 ### Technical Stack
 - **Host:** WSL2/Ubuntu 24.04 or Arch Linux
 - **Shell:** Bash / Fish
@@ -20,6 +27,43 @@ This project implements a high-performance **Canny edge detection** pipeline. Th
 
 ---
 
+## Visual Guides
+
+### 1. Project Mindmap & Mastery Path
+This diagram breaks down the core skills required to master this project, mapping out the relationships between the toolchain, C++ engineering, computer vision algorithms, testing, and RVV optimization.
+
+<img width="1408" height="768" alt="Gemini_Generated_Image_bmyjxbmyjxbmyjxb" src="https://github.com/user-attachments/assets/feca7eb9-67f5-496c-a534-8a2e8c31e6b1" />
+
+
+### 2. Toolchain & Emulation Workflow
+This visualization shows how the dual-target workflow connects your host machine to the RISC-V emulation environment, detailing the path from source code to functional correctness and performance profiling.
+
+<img width="1408" height="768" alt="Gemini_Generated_Image_bmyjxbmyjxbmyjxb (1)" src="https://github.com/user-attachments/assets/1ccbdf4e-b255-42c4-93f9-ec94f4061219" />
+
+
+---
+
+## Project Phases & Deliverables
+
+The workload is distributed across the following core phases:
+* **Setup:** Building the RISC-V GCC toolchain (with `--with-arch=rv64gcv`) and QEMU from source.
+* **Baseline:** Implementing image I/O, blur, and Sobel computations using generic C++ templates.
+* **Testing:** Writing GoogleTest unit tests for host and assert-based equivalence tests for QEMU.
+* **Compilers & Profiling:** Sweeping compiler flags, profiling per-stage execution times, and reading auto-vectorization reports.
+* **Vectorization:** Rewriting slow kernels with RVV intrinsics (handling strip-mining, LMUL selection, and data widening).
+* **Reporting & Demo:** Producing an optimization report, an AI Usage Log, and preparing for a live technical demonstration.
+
+---
+
+## Digital Electronics Context (Hardware meets Software)
+While executed on a software emulator (QEMU), the RVV optimizations in this project directly command simulated digital hardware structures:
+
+* **The Vector Datapath (VPUs):** Using intrinsics like `vadd` commands multiple ALUs (lanes) in parallel. Instead of processing one pixel per clock cycle, the hardware processes batches simultaneously.
+* **Vector Register File (VRF) & VLEN:** Sweeping `VLEN` tests the software against different hardware register widths. High VLEN means massive registers (e.g., 512 bits) managed by complex flip-flop arrays.
+* **Length Multiplier (LMUL):** Grouping registers (e.g., LMUL=8) forces hardware control logic to multiplex multiple registers into massive, continuous data chunks for the ALUs.
+* **Vector Length Agnostic (VLA) Logic:** Using `vsetvli` interacts with the `vl` Control and Status Register (CSR). The digital logic uses masking (AND gates) to dynamically enable/disable ALU lanes based on the hardware's physical capacity, ensuring safe execution across any VLEN.
+
+---
 ### Project Structure
 ```plaintext
 .
@@ -91,8 +135,9 @@ You can override hardware parameters directly from the command line:
 - Mouaz Kfafy
 - Mohamed elHosary
 
-## Resources
+## Resources & References
 - [RISC-V Vector Quick Intro](https://blog.timhutt.co.uk/riscv-vector/#the-end)
 - [RISCV-V RVV Intrinsics Viewer](https://dzaima.github.io/intrinsics-viewer/)
 - [Doxygen Documentation](https://www.doxygen.nl/)
 - [Markdown Guide](https://www.markdownguide.org/cheat-sheet/)
+- [Cornell University: RISC-V Vector Extension](https://www.cs.cornell.edu/courses/cs6120/2023fa/blog/rvv-llvm-gisel/)
