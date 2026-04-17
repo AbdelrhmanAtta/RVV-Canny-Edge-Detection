@@ -1,44 +1,38 @@
-# --- Project Information ---
 PROJECT_NAME           = "RVV Canny Edge Detection"
 PROJECT_NUMBER         = 1.0
 OUTPUT_DIRECTORY       = .
 CREATE_SUBDIRS         = NO
 ALLOW_UNICODE_NAMES    = YES
 
-# --- Input Configuration (CRITICAL FIX) ---
-# Point to your source, include, and README
+# --- Input ---
 INPUT                  = README.md inc src
 RECURSIVE              = YES
 FILE_PATTERNS          = *.cpp *.hpp *.h *.c *.md
 EXCLUDE                = build .venv tests scripts
-
-# --- Main Page Settings ---
-# Use your README.md as the landing page
 USE_MDRIP              = YES
 MAINPAGE_LOG           = README.md
 
-# --- Extraction Settings ---
-EXTRACT_ALL            = YES
-EXTRACT_PRIVATE        = NO
-EXTRACT_STATIC         = YES
-
-# --- Build Settings ---
-# Enable modern C++ parsing
-JAVADOC_AUTOBRIEF      = YES
-OPTIMIZE_OUTPUT_FOR_C  = NO
-
-# --- Diagram Generation (Graphviz) ---
-# Since your GitHub Action installs graphviz, turn these on!
-HAVE_DOT               = YES
-CALL_GRAPH             = YES
-CALLER_GRAPH           = YES
-DOT_PATH               = /usr/bin/dot
-
-# --- HTML Output Settings ---
+# --- Modern UI (Doxygen Awesome) ---
 GENERATE_HTML          = YES
 HTML_OUTPUT            = html
 HTML_FILE_EXTENSION    = .html
+# Add these to HTML_EXTRA_STYLESHEET (space separated)
+HTML_EXTRA_STYLESHEET  = external/doxygen-awesome-css/doxygen-awesome.css \
+                         external/doxygen-awesome-css/doxygen-awesome-sidebar-only.css
+HTML_EXTRA_FILES       = external/doxygen-awesome-css/doxygen-awesome-darkmode-toggle.js
+HTML_HEADER            = header.html
+HTML_COLORSTYLE        = TOGGLE 
+GENERATE_TREEVIEW      = YES    
+INTERACTIVE_SVG        = YES
 
-# --- Math Support (For your Canny/Gaussian math) ---
+# --- Extraction & Graphs ---
+EXTRACT_ALL            = YES
+HAVE_DOT               = YES
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+DOT_IMAGE_FORMAT       = svg
+DOT_PATH               = /usr/bin/dot
+
+# --- Math Support ---
 USE_MATHJAX            = YES
 MATHJAX_FORMAT         = HTML-CSS
