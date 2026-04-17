@@ -1,10 +1,11 @@
 HOST_CXX = g++
-RV_CXX   = riscv64-unknown-elf-g++
+RV_CXX   = riscv64-linux-gnu-g++
 GTEST    = $(HOME)/googletest-installed
+SRCS	 = $(wildcard src/*.cpp)
 
+RV_FLAGS = -std=c++20 -march=rv64gcv -O3 -static -Iinclude
+HOST_FLAGS = -std=c++20 -O3 -I$(GTEST)/include -L$(GTEST)/lib -lgtest -lgtest_main -lpthread
 
-RV_FLAGS   = -march=rv64gcv -O3 -static
-HOST_FLAGS = -O3 -I$(GTEST)/include -L$(GTEST)/lib -lgtest -lgtest_main -lpthread
 
 # Targets
 .PHONY: all clean run test run-test list-tests
@@ -13,9 +14,9 @@ all: canny_rv test
 
 
 # Main Canny Pipeline Build
-canny_rv: src/main.cpp
+canny_rv: $(SRCS)
 	@mkdir -p ./build/target/release
-	$(RV_CXX) $(RV_FLAGS) src/main.cpp -o build/target/release/canny_rv.elf
+	$(RV_CXX) $(RV_FLAGS) $(SRCS) -o build/target/release/canny_rv.elf
 
 # Standard Host Testing (GoogleTest)
 test: tests/host_tests.cpp
@@ -46,3 +47,4 @@ run-test: build/target/debug/$(NAME).elf
 # Utility to see what you can run
 list-tests:
 	@ls tests/*.cpp | xargs -n 1 basename | sed 's/\.cpp//'
+

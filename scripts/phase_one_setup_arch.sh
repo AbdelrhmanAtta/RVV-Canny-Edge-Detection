@@ -37,7 +37,9 @@ sleep 1
 sudo pacman -Syu --needed --noconfirm \
     base-devel multilib-devel git cmake ninja \
     glib2 pixman libslirp gmp mpc mpfr expat zlib python \
-    doxygen graphviz qt5-base texlive-basic texlive-latex
+    doxygen graphviz qt5-base texlive-basic texlive-latex \
+    riscv64-linux-gnu-gcc riscv64-linux-gnu-binutils \
+    riscv64-linux-gnu-glibc
 
 
 # RISCV Cross Toolchain
@@ -159,7 +161,7 @@ echo "Creating project structure..."
 echo -e "-------------------------------------------------------\n"
 sleep 1
 
-# Professional Architecture Folders
+# Architecture Folders
 mkdir -p "$HOME/$PROJECT_TITLE/assets"
 mkdir -p "$HOME/$PROJECT_TITLE/include"
 mkdir -p "$HOME/$PROJECT_TITLE/src"
@@ -168,56 +170,6 @@ mkdir -p "$HOME/$PROJECT_TITLE/tools"
 mkdir -p "$HOME/$PROJECT_TITLE/build/host"
 mkdir -p "$HOME/$PROJECT_TITLE/build/target"
 
-cat <<'EOF' > "$HOME/$PROJECT_TITLE/Makefile"
-HOST_CXX = g++
-RV_CXX   = riscv64-unknown-elf-g++
-GTEST    = $(HOME)/googletest-installed
-
-
-RV_FLAGS   = -march=rv64gcv -O3 -static
-HOST_FLAGS = -O3 -I$(GTEST)/include -L$(GTEST)/lib -lgtest -lgtest_main -lpthread
-
-# Targets
-.PHONY: all clean run test run-test list-tests
-
-all: canny_rv test
-
-
-# Main Canny Pipeline Build
-canny_rv: src/main.cpp
-	@mkdir -p ./build/target/release
-	$(RV_CXX) $(RV_FLAGS) src/main.cpp -o build/target/release/canny_rv.elf
-
-# Standard Host Testing (GoogleTest)
-test: tests/host_tests.cpp
-	@mkdir -p ./build/host/debug
-	$(HOST_CXX) -DHOST_MODE tests/host_tests.cpp $(HOST_FLAGS) -o build/host/debug/unit_tests
-	./build/host/debug/unit_tests
-
-# Run the main pipeline
-run: canny_rv
-	qemu-riscv64 -cpu max,vlen=512 build/target/release/canny_rv.elf
-
-# Cleanup build artifacts
-clean:
-	rm -rf build/*
-
-
-# AUTOMATIC PATTERN RULES FOR QUICK TESTING
-
-# Compiles any .cpp in tests/ to an .elf in build/target/
-build/target/debug/%.elf: tests/%.cpp
-	@mkdir -p ./build/target/debug
-	$(RV_CXX) $(RV_FLAGS) $< -o $@
-
-# Run any test by name: make run-test NAME=sanity
-run-test: build/target/debug/$(NAME).elf
-	qemu-riscv64 -cpu max,vlen=512 build/target/debug/$(NAME).elf
-
-# Utility to see what you can run
-list-tests:
-	@ls tests/*.cpp | xargs -n 1 basename | sed 's/\.cpp//'
-EOF
 
 echo -e "\n-------------------------------------------------------"
 echo "DONE!"
