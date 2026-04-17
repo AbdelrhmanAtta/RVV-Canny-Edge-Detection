@@ -6,10 +6,10 @@ CREATE_SUBDIRS         = NO
 ALLOW_UNICODE_NAMES    = YES
 
 # --- Input Configuration ---
-INPUT                  = README.md inc src
+INPUT                  = README.md inc src tools
 RECURSIVE              = YES
-FILE_PATTERNS          = *.cpp *.hpp *.h *.c *.md
-EXCLUDE                = build .venv tests scripts
+FILE_PATTERNS          = *.cpp *.hpp *.h *.c *.md *.py
+EXCLUDE                = build .venv tests
 
 # --- Main Page Settings (Fixed) ---
 USE_MDFILE_AS_MAINPAGE = README.md
