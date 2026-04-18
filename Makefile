@@ -4,8 +4,7 @@ GTEST    = $(HOME)/googletest-installed
 SRCS	 = $(wildcard src/*.cpp)
 
 RV_FLAGS = -std=c++20 -march=rv64gcv -O3 -static -Iinc
-HOST_FLAGS = -std=c++20 -O3 -I$(GTEST)/inc -L$(GTEST)/lib -lgtest -lgtest_main -lpthread
-
+HOST_FLAGS = -std=c++20 -O3 -I$(GTEST)/include -L$(GTEST)/lib -lgtest -lgtest_main -lpthread
 
 # Targets
 .PHONY: all clean run test run-test list-tests
@@ -47,4 +46,3 @@ run-test: build/target/debug/$(NAME).elf
 # Utility to see what you can run
 list-tests:
 	@ls tests/*.cpp | xargs -n 1 basename | sed 's/\.cpp//'
-

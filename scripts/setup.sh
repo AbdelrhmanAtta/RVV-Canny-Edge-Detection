@@ -14,8 +14,6 @@ echo -e "\e[36m
 sleep 1
 
 # Config
-TOOLCHAIN_DIR="$HOME/riscv-toolchain"
-TARGET_CLONE_DIR="$HOME/riscv-gnu-toolchain"
 GTEST_INSTALL_DIR="$HOME/googletest-installed"
 PROJECT_TITLE="RVV-Canny-Edge-Detection"
 JOBS=$(nproc)
@@ -49,8 +47,8 @@ if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ] || [ "$OS" = "pop" ]; then
         libpulse0 libgtk-3-0t64 libasound2t64 libdbus-1-3 \
         libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
         libxcb-render-util0 libxcb-xinerama0 libxcb-xinput0 libxcb-xfixes0 \
-        libqt5gui5t64 riscv64-linux-gnu-gcc riscv64-linux-gnu-binutils \
-        riscv64-linux-gnu-glibc
+        libqt5gui5t64 gcc-riscv64-linux-gnu g++-riscv64-linux-gnu \
+        binutils-riscv64-linux-gnu libc6-dev-riscv64-cross
     PYTHON_CMD="python3"
 elif [ "$OS" = "arch" ] || [ "$OS" = "manjaro" ]; then
     sudo pacman -Syu --needed --noconfirm \
@@ -65,47 +63,8 @@ else
     exit 1
 fi
 
-# Force delete if it's not a healthy git repo
-if [ -d "$TARGET_CLONE_DIR" ]; then
-    if [ ! -d "$TARGET_CLONE_DIR/.git" ]; then
-        echo "Found a broken clone at $TARGET_CLONE_DIR, removing it..."
-        rm -rf "$TARGET_CLONE_DIR"
-    fi
-fi
-
-if [ ! -d "$TARGET_CLONE_DIR" ]; then
-    echo "Cloning RISC-V GNU toolchain..."
-    git clone --recursive --depth 1 --shallow-submodules https://github.com/riscv-collab/riscv-gnu-toolchain "$TARGET_CLONE_DIR"
-else
-    echo "RISC-V GNU toolchain already exists, skipping clone."
-    cd "$TARGET_CLONE_DIR" && git submodule update --init --recursive --depth 1
-fi
-
-cd "$TARGET_CLONE_DIR" || { echo "Failed to enter $TARGET_CLONE_DIR"; exit 1; }
-./configure --prefix="$TOOLCHAIN_DIR" --with-arch=rv64gcv --with-abi=lp64d
-
-echo "-------------------------------------------------------"
-echo "Building RISC-V GNU toolchain with $JOBS jobs...This may take a while, study fields till its done :)"
-echo "-------------------------------------------------------"
-sleep 1
-if [ "$OS" = "arch" ] || [ "$OS" = "manjaro" ]; then
-    make -j"$JOBS"
-else
-    make newlib -j"$JOBS"
-fi
-
-# Add toolchain path in .bashrc
-if [[ ":$PATH:" != *":$TOOLCHAIN_DIR/bin:"* ]]; then
-    echo "export PATH=\"\$PATH:$TOOLCHAIN_DIR/bin\"" >> ~/.bashrc
-    export PATH="$PATH:$TOOLCHAIN_DIR/bin"
-fi
-
-if [ "$OS" = "arch" ] || [ "$OS" = "manjaro" ]; then
-    COMPILER_TEST="$TOOLCHAIN_DIR/bin/riscv64-unknown-elf-gcc"
-else
-    COMPILER_TEST="$TOOLCHAIN_DIR/bin/riscv64-unknown-elf-g++"
-fi
-if "$COMPILER_TEST" --version; then
+COMPILER_TEST="riscv64-linux-gnu-g++"
+if $COMPILER_TEST --version >/dev/null 2>&1; then
     echo "-------------------------------------------------------"
     echo "SUCCESS: RISC-V Toolchain is operational"
     echo "-------------------------------------------------------"
@@ -116,7 +75,7 @@ else
     exit 1
 fi
 
-# Bulding QEMU
+# Building QEMU
 cd "$HOME"
 if [ ! -d "$HOME/qemu" ]; then
     echo "Cloning QEMU repo..."
@@ -128,7 +87,7 @@ fi
 cd qemu
 mkdir -p build && cd build
 echo "Configuring QEMU for RISC-V..."
-../configure --target-list=riscv64-linux-user --enable-plugins
+../configure --target-list=riscv64-linux-user --enable-plugins --disable-docs
 echo "Building QEMU..."
 make -j"$JOBS"
 sudo make install
