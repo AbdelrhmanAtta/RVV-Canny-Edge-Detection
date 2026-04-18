@@ -1,32 +1,26 @@
 #!/bin/bash
 
 # Header
-echo "
-  _______  ___________  ___________  _______
- /  _   | /          / /          / /  _   |
-/  /_|  |/___  ____ / /___  ____ / /  /_|  |
-|   _   |   /  /         /  /      |   _   |
-|  | |  |  /  /         /  /       |  | |  |
-|__| |__| /__/         /__/        |__| |__|
-
-      RISC-V VECTOR TOOLCHAIN AUTOMATOR
-      Atta bymse 3leko <3
-"
-sleep 3
-
+echo -e "\e[36m
+ █████╗ ████████╗████████╗█████╗ 
+██╔══██╗╚══██╔══╝╚══██╔══╝██╔══██╗
+███████║   ██║      ██║   ███████║
+██╔══██║   ██║      ██║   ██╔══██║
+██║  ██║   ██║      ██║   ██║  ██║
+╚═╝  ╚═╝   ╚═╝      ╚═╝   ╚═╝  ╚═╝
+ 
+   RISC-V VECTOR TOOLCHAIN AUTOMATOR
+         Atta bymse 3leko <3 \e[0m"
+sleep 1
 
 # Config
 TOOLCHAIN_DIR="$HOME/riscv-toolchain"
-# Note: Separating install dir from source dir to prevent CMake errors
+TARGET_CLONE_DIR="$HOME/riscv-gnu-toolchain"
 GTEST_INSTALL_DIR="$HOME/googletest-installed"
 PROJECT_TITLE="RVV-Canny-Edge-Detection"
 JOBS=$(nproc)
-
-echo -e "\n-------------------------------------------------------"
-echo "Installation starting on $(uname -n)..."
-echo -e "-------------------------------------------------------\n"
-sleep 3
-
+VENV_DIR=".venv"
+PACKAGES="numpy matplotlib PyQt5"
 
 # OS Detection
 if [ -f /etc/os-release ]; then
@@ -37,13 +31,14 @@ else
     exit 1
 fi
 
-
-# System Dependencies
-echo -e "\n-------------------------------------------------------"
-echo "Installing system dependencies..."
-echo -e "-------------------------------------------------------\n"
+echo "-------------------------------------------------------"
+echo "Setup starting on $(uname -n)..."
+echo "-------------------------------------------------------"
 sleep 1
 
+
+# System Dependencies
+echo "Installing system dependencies..."
 if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ] || [ "$OS" = "pop" ]; then
     sudo apt update
     sudo apt install -y autoconf automake build-essential bison flex texinfo \
@@ -56,6 +51,7 @@ if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ] || [ "$OS" = "pop" ]; then
         libxcb-render-util0 libxcb-xinerama0 libxcb-xinput0 libxcb-xfixes0 \
         libqt5gui5t64 riscv64-linux-gnu-gcc riscv64-linux-gnu-binutils \
         riscv64-linux-gnu-glibc
+    PYTHON_CMD="python3"
 elif [ "$OS" = "arch" ] || [ "$OS" = "manjaro" ]; then
     sudo pacman -Syu --needed --noconfirm \
         base-devel multilib-devel git cmake ninja \
@@ -63,14 +59,11 @@ elif [ "$OS" = "arch" ] || [ "$OS" = "manjaro" ]; then
         doxygen graphviz qt5-base texlive-basic texlive-latex \
         riscv64-linux-gnu-gcc riscv64-linux-gnu-binutils \
         riscv64-linux-gnu-glibc
+    PYTHON_CMD="python"
 else
     echo "Unsupported OS: $OS"
     exit 1
 fi
-
-
-# RISCV Cross Toolchain
-TARGET_CLONE_DIR="$HOME/riscv-gnu-toolchain"
 
 # Force delete if it's not a healthy git repo
 if [ -d "$TARGET_CLONE_DIR" ]; then
@@ -81,53 +74,30 @@ if [ -d "$TARGET_CLONE_DIR" ]; then
 fi
 
 if [ ! -d "$TARGET_CLONE_DIR" ]; then
-    echo -e "\n-------------------------------------------------------"
     echo "Cloning RISC-V GNU toolchain..."
-    echo -e "-------------------------------------------------------\n"
-    sleep 1
     git clone --recursive --depth 1 --shallow-submodules https://github.com/riscv-collab/riscv-gnu-toolchain "$TARGET_CLONE_DIR"
 else
-    echo -e "\n-------------------------------------------------------"
     echo "RISC-V GNU toolchain already exists, skipping clone."
-    echo -e "-------------------------------------------------------\n"
-    sleep 1
     cd "$TARGET_CLONE_DIR" && git submodule update --init --recursive --depth 1
 fi
 
-# Use the explicit variable to change directory
 cd "$TARGET_CLONE_DIR" || { echo "Failed to enter $TARGET_CLONE_DIR"; exit 1; }
-
-echo -e "\n-------------------------------------------------------"
-echo "Configuring RISC-V GNU toolchain..."
-echo -e "-------------------------------------------------------\n"
-sleep 1
 ./configure --prefix="$TOOLCHAIN_DIR" --with-arch=rv64gcv --with-abi=lp64d
 
-echo -e "\n-------------------------------------------------------"
-echo -e "Building RISC-V GNU toolchain with $JOBS jobs...\nThis may take a while, study fields till its done :)"
-echo -e "-------------------------------------------------------\n"
-sleep 3
-
+echo "-------------------------------------------------------"
+echo "Building RISC-V GNU toolchain with $JOBS jobs...This may take a while, study fields till its done :)"
+echo "-------------------------------------------------------"
+sleep 1
 if [ "$OS" = "arch" ] || [ "$OS" = "manjaro" ]; then
     make -j"$JOBS"
 else
     make newlib -j"$JOBS"
 fi
 
-
 # Add toolchain path in .bashrc
 if [[ ":$PATH:" != *":$TOOLCHAIN_DIR/bin:"* ]]; then
-    echo -e "\n-------------------------------------------------------"
-    echo "Adding toolchain to PATH in .bashrc..."
     echo "export PATH=\"\$PATH:$TOOLCHAIN_DIR/bin\"" >> ~/.bashrc
-    echo -e "-------------------------------------------------------\n"
-    sleep 1
     export PATH="$PATH:$TOOLCHAIN_DIR/bin"
-else
-    echo -e "\n-------------------------------------------------------"
-    echo "Toolchain path already in PATH, skipping .bashrc modification."
-    echo -e "-------------------------------------------------------\n"
-    sleep 1
 fi
 
 if [ "$OS" = "arch" ] || [ "$OS" = "manjaro" ]; then
@@ -135,85 +105,52 @@ if [ "$OS" = "arch" ] || [ "$OS" = "manjaro" ]; then
 else
     COMPILER_TEST="$TOOLCHAIN_DIR/bin/riscv64-unknown-elf-g++"
 fi
-
 if "$COMPILER_TEST" --version; then
-    echo -e "\n-------------------------------------------------------"
+    echo "-------------------------------------------------------"
     echo "SUCCESS: RISC-V Toolchain is operational"
-    echo -e "-------------------------------------------------------\n"
+    echo "-------------------------------------------------------"
 else
-    echo -e "\n-------------------------------------------------------"
+    echo "-------------------------------------------------------"
     echo "ERROR: RISC-V Toolchain installation failed"
-    echo -e "-------------------------------------------------------\n"
+    echo "-------------------------------------------------------"
     exit 1
 fi
-sleep 1
-
 
 # Bulding QEMU
 cd "$HOME"
 if [ ! -d "$HOME/qemu" ]; then
-    echo -e "\n-------------------------------------------------------"
     echo "Cloning QEMU repo..."
-    echo -e "-------------------------------------------------------\n"
-    sleep 1
     git clone --depth 1 https://github.com/qemu/qemu
 else
-    echo -e "\n-------------------------------------------------------"
     echo "QEMU repo already exists, skipping clone."
-    echo -e "-------------------------------------------------------\n"
-    sleep 1
 fi
 
 cd qemu
 mkdir -p build && cd build
-echo -e "\n-------------------------------------------------------"
 echo "Configuring QEMU for RISC-V..."
-echo -e "-------------------------------------------------------\n"
-sleep 1
 ../configure --target-list=riscv64-linux-user --enable-plugins
-echo -e "\n-------------------------------------------------------"
 echo "Building QEMU..."
-echo -e "-------------------------------------------------------\n"
 make -j"$JOBS"
 sudo make install
-
 
 # Building Google Test
 cd "$HOME"
 if [ ! -d "googletest" ]; then
-    echo -e "\n-------------------------------------------------------"
     echo "Cloning Google Test repo..."
-    echo -e "-------------------------------------------------------\n"
-    sleep 1
     git clone --depth 1 https://github.com/google/googletest.git
 else
-    echo -e "\n-------------------------------------------------------"
     echo "Google Test repo already exists, skipping clone."
-    echo -e "-------------------------------------------------------\n"
-    sleep 1
 fi
 
 cd googletest
 mkdir -p build && cd build
-echo -e "\n-------------------------------------------------------"
 echo "Configuring Google Test..."
-echo -e "-------------------------------------------------------\n"
-sleep 1
 cmake .. -DCMAKE_INSTALL_PREFIX="$GTEST_INSTALL_DIR"
-echo -e "\n-------------------------------------------------------"
 echo "Building and Installing Google Test..."
-echo -e "-------------------------------------------------------\n"
-sleep 1
 make -j"$JOBS"
 make install
 
-
-echo -e "\n-------------------------------------------------------"
 echo "Creating project structure..."
-echo -e "-------------------------------------------------------\n"
-sleep 1
-
-# Professional Architecture Folders
 mkdir -p "$HOME/$PROJECT_TITLE/assets"
 mkdir -p "$HOME/$PROJECT_TITLE/include"
 mkdir -p "$HOME/$PROJECT_TITLE/src"
@@ -222,9 +159,24 @@ mkdir -p "$HOME/$PROJECT_TITLE/tools"
 mkdir -p "$HOME/$PROJECT_TITLE/build/host"
 mkdir -p "$HOME/$PROJECT_TITLE/build/target"
 
+cd "$HOME/$PROJECT_TITLE" || exit 1
+echo "-------------------------------------------------------"
+echo "Setting up python environment..."
+echo "-------------------------------------------------------"
+sleep 1
+$PYTHON_CMD -m venv $VENV_DIR
+./$VENV_DIR/bin/python -m pip install --upgrade pip
+./$VENV_DIR/bin/python -m pip install $PACKAGES
 
-echo -e "\n-------------------------------------------------------"
-echo "DONE!"
+echo "-------------------------------------------------------"
+echo "Toolchain Setup"
 echo "Workspace: ~/$PROJECT_TITLE"
 echo "Run 'source ~/.bashrc' to enable the tools."
-echo -e "-------------------------------------------------------\n"
+echo "-------------------------------------------------------"
+
+echo "-------------------------------------------------------"
+echo "Python Setup"
+echo "Venv: ./$VENV_DIR"
+echo "Run 'source $VENV_DIR/bin/activate' to enable the venv."
+echo "Run 'python path/to/your_script.py' to run the script." 
+echo "-------------------------------------------------------"
