@@ -43,3 +43,5 @@ build/
 .vscode/
 html/
 latex/
+.venv/
+
