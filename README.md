@@ -147,3 +147,4 @@ You can override hardware parameters directly from the command line:
 - [Doxygen Documentation](https://www.doxygen.nl/)
 - [Markdown Guide](https://www.markdownguide.org/cheat-sheet/)
 - [Cornell University: RISC-V Vector Extension](https://www.cs.cornell.edu/courses/cs6120/2023fa/blog/rvv-llvm-gisel/)
+- [Gaussian Blue](https://computergraphics.stackexchange.com/questions/39/how-is-gaussian-blur-implemented)

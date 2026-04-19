@@ -1,7 +1,8 @@
 HOST_CXX = g++
-RV_CXX   = riscv64-linux-gnu-g++
-GTEST    = $(HOME)/googletest-installed
-SRCS	 = $(wildcard src/*.cpp)
+RV_CXX   	:= riscv64-linux-gnu-g++
+GTEST    	:= $(HOME)/googletest-installed
+SRCS        := $(wildcard src/*.cpp)
+LIB_SRCS    := $(filter-out src/main.cpp, $(SRCS))
 
 RV_FLAGS = -std=c++20 -march=rv64gcv -O3 -static -Iinc
 HOST_FLAGS = -std=c++20 -O3 -I$(GTEST)/include -L$(GTEST)/lib -lgtest -lgtest_main -lpthread
@@ -35,9 +36,9 @@ clean:
 # AUTOMATIC PATTERN RULES FOR QUICK TESTING
 
 # Compiles any .cpp in tests/ to an .elf in build/target/
-build/target/debug/%.elf: tests/%.cpp
+build/target/debug/%.elf: tests/%.cpp $(LIB_SRCS)
 	@mkdir -p ./build/target/debug
-	$(RV_CXX) $(RV_FLAGS) $< -o $@
+	$(RV_CXX) $(RV_FLAGS) $^ -o $@
 
 # Run any test by name: make run-test NAME=sanity
 run-test: build/target/debug/$(NAME).elf

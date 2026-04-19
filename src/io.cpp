@@ -1,10 +1,13 @@
 #include "io.hpp"
+#include <iostream>
+#include <fstream>
+#include <cstdlib>
 
 /**
  * @details Uses std::aligned_alloc to ensure the buffer is cache-line friendly (64-byte alignment).
  * The allocated size is rounded up to the nearest 64 bytes.
  */
-uint8_t* IO_LoadRaw(const std::string& fileName, uint32_t imageWidth, uint32_t imageHeight)
+uint8_t* io_loadRaw(const std::string& fileName, uint32_t imageWidth, uint32_t imageHeight)
 {
     size_t imageSize = static_cast<size_t>(imageWidth) * imageHeight;
     // Align imageSize to 64 bytes for SIMD/Performance
@@ -36,7 +39,7 @@ uint8_t* IO_LoadRaw(const std::string& fileName, uint32_t imageWidth, uint32_t i
  * @details Simply writes the provided buffer to disk. Does not perform 
  * validation on the buffer size versus provided dimensions.
  */
-void IO_SaveRaw(const std::string& fileName, uint8_t* imageBuffer, uint32_t imageWidth, uint32_t imageHeight)
+void io_saveRaw(const std::string& fileName, uint8_t* imageBuffer, uint32_t imageWidth, uint32_t imageHeight)
 {
     if(!imageBuffer)
     {

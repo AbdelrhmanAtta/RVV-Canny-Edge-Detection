@@ -24,10 +24,10 @@ int main()
 
     for(const auto& [src, dest, w, h] : images)
     {
-        uint8_t* imageBuffer = IO_LoadRaw(src, w, h);
+        uint8_t* imageBuffer = io_loadRaw(src, w, h);
         if (imageBuffer != nullptr) 
         {
-            IO_SaveRaw(dest, imageBuffer, w, h);
+            io_saveRaw(dest, imageBuffer, w, h);
             std::free(imageBuffer);
         }
         else 

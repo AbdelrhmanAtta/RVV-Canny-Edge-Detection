@@ -5,23 +5,20 @@
 
 #pragma once
 
-#include <iostream>
-#include <fstream>
 #include <string>
 #include <cstdint>
-#include <cstdlib>
 
 /**
  * @brief Loads a raw binary file into an aligned memory buffer.
  * * This function reads a raw file from the `./assets/` directory. The resulting 
- * buffer is 64-byte aligned to facilitate SIMD operations.
+ * buffer is 64-byte aligned to facilitate vector operations.
  * * @param fileName    The name of the file (searched within ./assets/).
  * @param imageWidth  The width of the image in pixels.
  * @param imageHeight The height of the image in pixels.
  * @return uint8_t* Pointer to the allocated image buffer, or nullptr on failure.
  * @note The caller is responsible for freeing the returned memory using std::free().
  */
-uint8_t* IO_LoadRaw(const std::string& fileName, uint32_t imageWidth, uint32_t imageHeight);
+uint8_t* io_loadRaw(const std::string& fileName, uint32_t imageWidth, uint32_t imageHeight);
 
 /**
  * @brief Saves a buffer of image data to a raw binary file.
@@ -31,4 +28,4 @@ uint8_t* IO_LoadRaw(const std::string& fileName, uint32_t imageWidth, uint32_t i
  * @param imageWidth  The width of the image in pixels.
  * @param imageHeight The height of the image in pixels.
  */
-void IO_SaveRaw(const std::string& fileName, uint8_t* imageBuffer, uint32_t imageWidth, uint32_t imageHeight);
+void io_saveRaw(const std::string& fileName, uint8_t* imageBuffer, uint32_t imageWidth, uint32_t imageHeight);
