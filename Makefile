@@ -40,8 +40,8 @@ build/target/debug/%.elf: tests/%.cpp $(LIB_SRCS)
 	@mkdir -p ./build/target/debug
 	$(RV_CXX) $(RV_FLAGS) $^ -o $@
 
-# Run any test by name: make run-test NAME=sanity
-run-test: build/target/debug/$(NAME).elf
+# Run any test by name: make run-tests NAME=sanity
+run-tests: build/target/debug/$(NAME).elf
 	qemu-riscv64 -cpu max,vlen=512 build/target/debug/$(NAME).elf
 
 # Utility to see what you can run

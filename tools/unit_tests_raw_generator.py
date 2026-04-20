@@ -3,12 +3,12 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-## @class TestImageGenerator
-#  @brief A utility class for generating basic geometric test images as NumPy arrays.
+## @class UnitTestsRawGenerator
+#  @brief A utility class for generating basic geometric unit test raw images as NumPy arrays.
 #
 #  This class provides methods to create binary images (0 or 255) containing
 #  rectangles, circles, and diagonal edges for testing image processing algorithms.
-class TestImageGenerator:
+class UnitTestsRawGenerator:
     
     ## @brief Initializes the generator with a square canvas size.
     #  @param size The dimension (width and height) of the square background.
@@ -66,7 +66,7 @@ if __name__ == "__main__":
         print("Invalid dimensions provided. Usage: python script.py [width] [height]")
         sys.exit(1)
 
-    gen = TestImageGenerator(size=max(image_height,image_width))
+    gen = UnitTestsRawGenerator(size=max(image_height,image_width))
 
     # Determine paths
     assets_path = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../assets'))
