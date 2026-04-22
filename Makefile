@@ -4,8 +4,8 @@ GTEST    	:= $(HOME)/googletest-installed
 SRCS        := $(wildcard src/*.cpp)
 LIB_SRCS    := $(filter-out src/main.cpp, $(SRCS))
 
-RV_FLAGS = -std=c++20 -march=rv64gcv -O3 -static -Iinc
-HOST_FLAGS = -std=c++20 -O3 -I$(GTEST)/include -L$(GTEST)/lib -lgtest -lgtest_main -lpthread
+RV_FLAGS = -std=c++23 -march=rv64gcv -O3 -static -Iinc
+HOST_FLAGS = -std=c++23 -O3 -I$(GTEST)/include -L$(GTEST)/lib -lgtest -lgtest_main -lpthread
 
 # Targets
 .PHONY: all clean run test run-test list-tests
