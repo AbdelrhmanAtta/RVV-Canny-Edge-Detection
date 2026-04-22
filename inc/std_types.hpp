@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <expected>
 
 /**
  * @file std_types.hpp
@@ -19,6 +20,7 @@
 enum class Status : uint8_t
 {
     E_OK  = 0,              /**< Operation completed successfully */
-    E_NOK = 1,              /**< Operation failed */
-    E_INVAL_PTR = 2,        /**< Invalid Pointer */
+    E_INVAL_PTR,            /**< Invalid Pointer */
+    E_ALLOC_FAIL,           /**< Memory Allocation Failure */
+    E_INVAL_DIR,            /**< Invalid Direction */
 };
