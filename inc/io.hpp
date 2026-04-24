@@ -11,7 +11,6 @@
 #include "std_types.hpp"
 #include "utils.hpp"
 #include <string_view>
-#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <memory>
@@ -20,24 +19,9 @@
 
 namespace image::io
 {
-/**
- * @brief   Metadata and buffer management for an image.
- * @tparam  PixelT The underlying data type of each pixel (default is uint8_t).
- */
-template <typename PixelT = uint8_t>
-struct image_metadata
-{
-    /** @brief RAII pointer to 64-byte aligned pixel data. */
-    std::unique_ptr<PixelT[], utils::AlignedDeleter> image_buffer;
-    uint32_t image_width;
-    uint32_t image_height;
-    size_t pixel_count;
-    size_t aligned_buffer_size;
-};
-
 /** @brief Result type alias for image loading operations. */
 template <typename PixelT = uint8_t>
-using load_result_t = std::expected<image_metadata<PixelT>, Status>;
+using load_result_t = std::expected<metadata_t<PixelT>, Status>;
 
 /**
  * @brief   Loads a raw binary file from disk into an aligned RAII buffer.
@@ -67,7 +51,7 @@ template <typename PixelT = uint8_t>
     }
 
     // Initialize Metadata and transfer ownership to unique_ptr
-    image_metadata<PixelT> meta
+    metadata_t<PixelT> metadata
     {
         .image_buffer = std::unique_ptr<PixelT[], utils::memory::deleter>(static_cast<PixelT*>(raw_ptr)),
         .image_width = image_width,
@@ -85,12 +69,12 @@ template <typename PixelT = uint8_t>
     }
 
     // Read the actual image data into the aligned buffer
-    if (!file.read(reinterpret_cast<char*>(meta.image_buffer.get()), total_bytes))
+    if (!file.read(reinterpret_cast<char*>(metadata.image_buffer.get()), total_bytes))
     {
         return std::unexpected(Status::E_NOK);
     }
 
-    return meta;
+    return metadata;
 }
 
 /**
