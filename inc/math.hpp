@@ -36,7 +36,7 @@ template <typename PixelT = uint8_t, typename KernelT = uint8_t, typename Accumu
                                             const kernel_t<KernelT, AccumulatorT>& kernel,
                                             const clamp_t<PixelT>& clamp)
 {
-    if(0==kernel.kernel_height || 0==kernel.kernel_width ||
+    if(!kernel.kernel_height || !kernel.kernel_width ||
         !image.image_height || !image.image_width)
     {
         return std::unexpected(Status::E_NOK);
