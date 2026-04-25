@@ -18,10 +18,10 @@ using convolution_t = std::expected<PixelT*, Status>;
 /**
  * @brief   Applies a spatial convolution to an image using the provided kernel.
  * The function supports edge clamping to handle borders and optional output clamping.
+ * @tparam  ClampT          Whether to apply clamping to the output values.
  * @tparam  PixelT          The pixel component type (e.g., uint8_t, uint16_t, float).
  * @tparam  KernelT         The kernel component type (e.g., uint8_t, uint16_t).
  * @tparam  AccumulatorT    The type used for accumulating convolution sums to prevent overflow (e.g., int32_t, uint32_t).
- * @tparam  ClampT          Whether to apply clamping to the output values.
  * @param   image           The input image metadata and buffer.
  * @param   image_output    Pointer to the output buffer where the convolved image will be stored.
  * @param   kernel          The convolution kernel structure (contains data, dimensions, and sum).
@@ -30,7 +30,7 @@ using convolution_t = std::expected<PixelT*, Status>;
  * @note    The output buffer must be pre-allocated and large enough to hold the convolved image data.
  * @note    If clamping is required, ClampT must be set to true.
  */
-template <typename PixelT = uint8_t, typename KernelT = uint8_t, typename AccumulatorT = int32_t, bool ClampT = false>
+template <bool ClampT = false, typename PixelT = uint8_t, typename KernelT = uint8_t, typename AccumulatorT = int32_t>
 [[nodiscard]] convolution_t<PixelT> spatial(const image::io::metadata_t<PixelT>& image,
                                             PixelT* image_output,
                                             const kernel_t<KernelT, AccumulatorT>& kernel,

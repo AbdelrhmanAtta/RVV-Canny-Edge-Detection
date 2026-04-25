@@ -10,7 +10,7 @@
 
 #include "std_types.hpp"
 
-namespace processing::kernels
+namespace processing::convolution
 {
 /**
  * @brief   3x3 Gaussian blur kernel and its 1D separable counterpart.
@@ -51,14 +51,14 @@ inline constexpr uint8_t GAUSSIAN_5x5_DATA[] =
     1,  4,  7,  4, 1
 };
 inline constexpr uint8_t GAUSSIAN_5x5_1D_DATA[] = {1, 4, 7, 4, 1};
-inline constexpr kernel_t<uint8_t, uint16_t> GAUSSIAN_5x5 = 
+inline constexpr kernel_t<uint8_t, uint32_t> GAUSSIAN_5x5 = 
 {
     .kernel_data = GAUSSIAN_5x5_DATA,
     .kernel_width = 5,
     .kernel_height = 5,
     .kernel_sum = 273
 };  
-inline constexpr kernel_t<uint8_t, uint16_t> GAUSSIAN_5x5_1D = 
+inline constexpr kernel_t<uint8_t, uint32_t> GAUSSIAN_5x5_1D = 
 {
     .kernel_data = GAUSSIAN_5x5_1D_DATA,
     .kernel_width = 5,
@@ -81,14 +81,14 @@ inline constexpr uint8_t GAUSSIAN_7x7_DATA[] =
     0,  0,  1,   2,  1,  0, 0
 };
 inline constexpr uint8_t GAUSSIAN_7x7_1D_DATA[] = {1, 3, 7, 11, 7, 3, 1};
-inline constexpr kernel_t<uint8_t, uint16_t> GAUSSIAN_7x7 = 
+inline constexpr kernel_t<uint8_t, uint32_t> GAUSSIAN_7x7 = 
 {
     .kernel_data = GAUSSIAN_7x7_DATA,
     .kernel_width = 7,
     .kernel_height = 7,
     .kernel_sum = 1111
 };
-inline constexpr kernel_t<uint8_t, uint16_t> GAUSSIAN_7x7_1D = 
+inline constexpr kernel_t<uint8_t, uint32_t> GAUSSIAN_7x7_1D = 
 {
     .kernel_data = GAUSSIAN_7x7_1D_DATA,
     .kernel_width = 7,
@@ -96,4 +96,4 @@ inline constexpr kernel_t<uint8_t, uint16_t> GAUSSIAN_7x7_1D =
     .kernel_sum = 33
 };
 
-} // namespace processing::kernels
+} // namespace processing::convolution

@@ -16,7 +16,7 @@
  * typically used for smoothing and noise reduction.
  */
 
-inline constexpr uint16_t GAUSSIAN_KERNEL_2D[5][5] = 
+inline constexpr uint16_t GAUSSIAN_5x5_DATA[5][5] = 
 {
     {1,  4,  7,  4, 1},
     {4, 16, 26, 16, 4},
