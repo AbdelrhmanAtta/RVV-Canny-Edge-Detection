@@ -51,7 +51,7 @@ struct metadata_t
 namespace processing::convolution
 {
 template <typename KernelT = uint8_t, typename AccumulatorT = int32_t>
-struct parameters_t
+struct kernel_t
 {
     const KernelT* kernel_data;
     uint8_t kernel_width;
@@ -59,11 +59,11 @@ struct parameters_t
     AccumulatorT kernel_sum;
 };
 
-template <typename KernelT = uint8_t>
+template <typename PixelT = uint8_t>
 struct clamp_t
 {
-    KernelT clamp_min;
-    KernelT clamp_max;
+    PixelT clamp_min;
+    PixelT clamp_max;
 };
 
 } // namespace processing::convolution
