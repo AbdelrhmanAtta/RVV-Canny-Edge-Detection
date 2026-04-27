@@ -57,12 +57,12 @@ While the project runs in emulation, the RVV optimizations interact with simulat
 ## Getting Started
 
 ### Environment Setup
-The setup script automates the installation of the RISC-V GNU toolchain, QEMU, and GoogleTest. Windows OS users should use WSL2 with Ubuntu 24.04.
+The setup script automates the installation of the RISC-V GNU toolchain, QEMU, GoogleTest and Python packages. Windows OS users should use WSL2 with Ubuntu 24.04.
 
 Run in terminal:
 ```bash
 chmod +x scripts/phase_one_setup.sh
-./scripts/phase_one_setup.sh
+./scripts/setup.sh
 source ~/.bashrc
 ```
 
