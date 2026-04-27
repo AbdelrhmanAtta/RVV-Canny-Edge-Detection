@@ -34,7 +34,7 @@ int main()
     }
     blurred_image.image_buffer.reset(static_cast<uint8_t*>(out_ptr));
 
-    auto conv_result = processing::convolution::spatial<false>(
+    auto conv_result = processing::convolution::spatial<true>(
         raw_image, 
         blurred_image.image_buffer.get(), 
         processing::convolution::GAUSSIAN_5x5, // Deducted as kernel_t<uint8_t, uint32_t>

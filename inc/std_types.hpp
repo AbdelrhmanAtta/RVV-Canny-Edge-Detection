@@ -40,8 +40,8 @@ struct metadata_t
 {
     /** @brief RAII pointer to 64-byte aligned pixel data. */
     std::unique_ptr<PixelT[], utils::memory::deleter> image_buffer;
-    uint32_t image_width;
-    uint32_t image_height;
+    uint32_t width;
+    uint32_t height;
     size_t pixel_count;
     size_t aligned_buffer_size;
 };
@@ -53,10 +53,10 @@ namespace processing::convolution
 template <typename KernelT = uint8_t, typename AccumulatorT = int32_t>
 struct kernel_t
 {
-    const KernelT* kernel_data;
-    uint8_t kernel_width;
-    uint8_t kernel_height;
-    AccumulatorT kernel_sum;
+    const KernelT* data;
+    uint8_t width;
+    uint8_t height;
+    AccumulatorT sum;
 };
 
 template <typename PixelT = uint8_t>
