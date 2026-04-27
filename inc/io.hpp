@@ -31,7 +31,7 @@ template <typename PixelT = uint8_t>
 [[nodiscard]] Status load_raw(const std::string_view file_name, 
                               metadata_t<PixelT>& metadata)
 {
-    const size_t pixel_count = static_cast<size_t>(metadata.image_width) * metadata.image_height;
+    const size_t pixel_count = static_cast<size_t>(metadata.width) * metadata.height;
     const size_t total_bytes = pixel_count * sizeof(PixelT);
     const size_t aligned_buffer_size = utils::memory::align_64(total_bytes);
 
@@ -48,7 +48,7 @@ template <typename PixelT = uint8_t>
     }
 
     // Update the existing Metadata struct in-place
-    metadata.image_buffer.reset(static_cast<PixelT*>(raw_ptr));
+    metadata.buffer.reset(static_cast<PixelT*>(raw_ptr));
     metadata.pixel_count = pixel_count;
     metadata.aligned_buffer_size = aligned_buffer_size;
 
@@ -60,7 +60,7 @@ template <typename PixelT = uint8_t>
         return Status::E_INVAL_DIR;
     }
 
-    if (!file.read(reinterpret_cast<char*>(metadata.image_buffer.get()), total_bytes))
+    if (!file.read(reinterpret_cast<char*>(metadata.buffer.get()), total_bytes))
     {
         return Status::E_NOK;
     }
@@ -81,7 +81,7 @@ template <typename PixelT = uint8_t>
 [[nodiscard]] Status save_raw(const std::string_view file_name,
                               const metadata_t<PixelT>& metadata)
 {
-    if(!metadata.image_buffer)
+    if(!metadata.buffer)
     {
         return Status::E_INVAL_PTR;
     }
@@ -101,7 +101,7 @@ template <typename PixelT = uint8_t>
     const size_t total_bytes = metadata.pixel_count * sizeof(PixelT);
     
     // Write raw bytes to disk
-    if (!file.write(reinterpret_cast<const char*>(metadata.image_buffer.get()), total_bytes))
+    if (!file.write(reinterpret_cast<const char*>(metadata.buffer.get()), total_bytes))
     {
         return Status::E_NOK;
     }

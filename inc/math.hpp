@@ -30,14 +30,14 @@ template <bool ClampT = false, typename PixelT = uint8_t, typename KernelT = uin
 [[nodiscard]] Status spatial(const image::io::metadata_t<PixelT>& image,
                             PixelT* image_output,
                             const kernel_t<KernelT, AccumulatorT>& kernel,
-                            const clamp_t<PixelT>& clamp)
+                            const clamp_t<PixelT>& clamp={})
 {
     if(!kernel.height || !kernel.width || !kernel.data
         || !image.height || !image.width || !image.aligned_buffer_size)
     {
         return Status::E_NOK;
     }
-    if (!image.image_buffer)
+    if (!image.buffer)
     {
         return Status::E_INVAL_PTR; 
     }
@@ -61,7 +61,7 @@ template <bool ClampT = false, typename PixelT = uint8_t, typename KernelT = uin
                 for(int32_t kx=-kernel_horizontal_radius; kx<=kernel_horizontal_radius; ++kx)
                 {
                     const int32_t nx = std::max(0, std::min(kx+static_cast<int32_t>(x), static_cast<int32_t>(image.width)-1));
-                    convolution_sum += static_cast<AccumulatorT>(image.image_buffer[row_offset+nx])
+                    convolution_sum += static_cast<AccumulatorT>(image.buffer[row_offset+nx])
                                         *kernel.data[k_row_offset+(kx+kernel_horizontal_radius)];
                 }
             }
@@ -101,32 +101,32 @@ template <bool ClampT = false, typename PixelT = uint8_t, typename KernelT = uin
 [[nodiscard]] Status separable(const image::io::metadata_t<PixelT>& image,
                                 PixelT* image_output,
                                 const kernel_t<KernelT, AccumulatorT>& kernel,
-                                const clamp_t<PixelT>& clamp)
+                                const clamp_t<PixelT>& clamp={})
 {
     if(!kernel.height || !kernel.width || !kernel.data
         || !image.height || !image.width || !image.aligned_buffer_size)
     {
         return Status::E_NOK;
     }
-    if (!image.image_buffer)
+    if (!image.buffer)
     {
         return Status::E_INVAL_PTR; 
     }
  
-    std::vector<AccumulatorT> output_buffer(image.width*image.height, 0);
+    std::vector<AccumulatorT> output_buffer(image.width*image.height);
     const uint8_t kernel_radius = std::max((kernel.width-1)/2, (kernel.height-1)/2);
     const bool normalize = kernel.sum != 0;
  
     for(uint32_t y=0; y<image.height; ++y)
     {
-        const uint32_t offset = y * image.width;
+        const uint32_t offset = y*image.width;
         for(uint32_t x=0; x<image.width; ++x)
         {
             AccumulatorT convolution_sum=0;
             for(int32_t kx=-kernel_radius; kx<=kernel_radius; ++kx)
             {
                 const int32_t nx = std::max(0, std::min(kx+static_cast<int32_t>(x), static_cast<int32_t>(image.width)-1));
-                convolution_sum += static_cast<AccumulatorT>(image.image_buffer[offset+nx])
+                convolution_sum += static_cast<AccumulatorT>(image.buffer[offset+nx])
                                                             *kernel.data[kx+kernel_radius];
             }
             output_buffer[y*image.width+x] = convolution_sum;
@@ -135,7 +135,7 @@ template <bool ClampT = false, typename PixelT = uint8_t, typename KernelT = uin
  
     for(uint32_t y=0; y<image.height; ++y)
     {
-        const uint32_t offset = y * image.width;
+        const uint32_t offset = y*image.width;
         for(uint32_t x=0; x<image.width; ++x)
         {
             AccumulatorT convolution_sum=0;

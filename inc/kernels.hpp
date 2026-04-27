@@ -25,17 +25,17 @@ inline constexpr uint8_t GAUSSIAN_3x3_DATA[] =
 inline constexpr uint8_t GAUSSIAN_3x3_1D_DATA[3] = {1, 2, 1};
 inline constexpr kernel_t<uint8_t, uint16_t> GAUSSIAN_3x3 = 
 {
-    .kernel_data = GAUSSIAN_3x3_DATA,
-    .kernel_width = 3,
-    .kernel_height = 3,
-    .kernel_sum = 16
+    .data = GAUSSIAN_3x3_DATA,
+    .width = 3,
+    .height = 3,
+    .sum = 16
 };
 inline constexpr kernel_t<uint8_t, uint16_t> GAUSSIAN_3x3_1D = 
 {
-    .kernel_data = GAUSSIAN_3x3_1D_DATA,
-    .kernel_width = 3,
-    .kernel_height = 1,
-    .kernel_sum = 4
+    .data = GAUSSIAN_3x3_1D_DATA,
+    .width = 3,
+    .height = 1,
+    .sum = 4
 };
 
 /**
@@ -53,17 +53,17 @@ inline constexpr uint8_t GAUSSIAN_5x5_DATA[] =
 inline constexpr uint8_t GAUSSIAN_5x5_1D_DATA[] = {1, 4, 7, 4, 1};
 inline constexpr kernel_t<uint8_t, uint32_t> GAUSSIAN_5x5 = 
 {
-    .kernel_data = GAUSSIAN_5x5_DATA,
-    .kernel_width = 5,
-    .kernel_height = 5,
-    .kernel_sum = 273
+    .data = GAUSSIAN_5x5_DATA,
+    .width = 5,
+    .height = 5,
+    .sum = 273
 };  
 inline constexpr kernel_t<uint8_t, uint32_t> GAUSSIAN_5x5_1D = 
 {
-    .kernel_data = GAUSSIAN_5x5_1D_DATA,
-    .kernel_width = 5,
-    .kernel_height = 1,
-    .kernel_sum = 17
+    .data = GAUSSIAN_5x5_1D_DATA,
+    .width = 5,
+    .height = 1,
+    .sum = 17
 };
 
 /**
@@ -83,17 +83,17 @@ inline constexpr uint8_t GAUSSIAN_7x7_DATA[] =
 inline constexpr uint8_t GAUSSIAN_7x7_1D_DATA[] = {1, 3, 7, 11, 7, 3, 1};
 inline constexpr kernel_t<uint8_t, uint32_t> GAUSSIAN_7x7 = 
 {
-    .kernel_data = GAUSSIAN_7x7_DATA,
-    .kernel_width = 7,
-    .kernel_height = 7,
-    .kernel_sum = 1111
+    .data = GAUSSIAN_7x7_DATA,
+    .width = 7,
+    .height = 7,
+    .sum = 1111
 };
 inline constexpr kernel_t<uint8_t, uint32_t> GAUSSIAN_7x7_1D = 
 {
-    .kernel_data = GAUSSIAN_7x7_1D_DATA,
-    .kernel_width = 7,
-    .kernel_height = 1,
-    .kernel_sum = 33
+    .data = GAUSSIAN_7x7_1D_DATA,
+    .width = 7,
+    .height = 1,
+    .sum = 33
 };
 
 } // namespace processing::convolution
