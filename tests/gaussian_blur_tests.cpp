@@ -2,7 +2,6 @@
 #include "io.hpp"
 #include "filters.hpp"
 #include "math.hpp"
-#include "kernels.hpp"
 
 int main()
 {
