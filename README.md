@@ -6,8 +6,8 @@ This project implements a high-performance Canny edge detection pipeline, focusi
 
 ### Pipeline Stages
 1. **Gaussian Blur:** 5x5 Kernel (2D Convolution)
-2. **Sobel Operator:** $G_x$ and $G_y$ gradients (3x3 Kernels)
-3. **Magnitude & Direction:** $L_1/L_2$ Norms and 4-way direction quantization.
+2. **Sobel Operator:** Gx and Gy gradients (3x3 Kernels)
+3. **Magnitude & Direction:** L1/L2 Norms and 4-way direction quantization.
 4. **NMS & Hysteresis:** Non-Maximum Suppression and Double Thresholding.
 
 ### Project Workflow
