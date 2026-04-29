@@ -42,4 +42,21 @@ template <bool ClampT = false, typename PixelT = uint8_t, typename KernelT = uin
     return Status::E_OK;
 }
 
+template <bool ClampT = false, typename PixelT = uint8_t, typename KernelT = int8_t, typename AccumulatorT = int16_t>
+[[nodiscard]] Status sobel_filter(const image::io::metadata_t<PixelT>& image,
+                                AccumulatorT* Gx_output,
+                                AccumulatorT* Gy_output,
+                                const processing::convolution::kernel_t<KernelT, AccumulatorT>& kernel_x,
+                                const processing::convolution::kernel_t<KernelT, AccumulatorT>& kernel_y,
+                                const processing::convolution::clamp_t<PixelT>& clamp={})
+{
+    Status statusX = processing::convolution::spatial<ClampT, AccumulatorT, KernelT, AccumulatorT>(image, Gx_output, processing::convolution::SOBEL_HORIZONTAL_3x3);
+    Status statusY = processing::convolution::spatial<ClampT, AccumulatorT, KernelT, AccumulatorT>(image, Gy_output, processing::convolution::SOBEL_VERTICAL_3x3);
+    if(Status::E_OK!=statusX || Status::E_OK!=statusY)
+    {
+        return Status::E_NOK;
+    }
+    else return Status::E_OK;
+}
+
 } // namespace processing::filters

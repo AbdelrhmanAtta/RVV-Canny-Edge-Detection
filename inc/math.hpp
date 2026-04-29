@@ -245,6 +245,38 @@ inline constexpr kernel_t<uint8_t, uint32_t> GAUSSIAN_7x7_1D =
 };
 
 /**
+ * @brief   3x3 Sobel Filter kernel and its 1D separable counterpart.
+ * The Sobel filter is used for edge detection, with the horizontal kernel detecting vertical edges and the vertical kernel detecting horizontal edges.
+ * The kernels are not normalized, and the sum is set to 0 to indicate that no normalization should be applied.
+ */
+inline constexpr int8_t SOBEL_HORIZONTAL_3x3_DATA[] = 
+{
+    -1, 0, 1,
+    -2, 0, 2,
+    -1, 0, 1
+};
+inline constexpr kernel_t<int8_t, uint16_t> SOBEL_HORIZONTAL_3x3 =
+{
+    .data = SOBEL_HORIZONTAL_3x3_DATA,
+    .width = 3,
+    .height = 3,
+    .sum = 0
+};
+inline constexpr int8_t SOBEL_VERTICAL_3x3_DATA[] = 
+{
+    -1, -2, -1,
+    0, 0, 0,
+    1, 2, 1
+};
+inline constexpr kernel_t<int8_t, uint16_t> SOBEL_VERTICAL_3x3 =
+{
+    .data = SOBEL_VERTICAL_3x3_DATA,
+    .width = 3,
+    .height = 3,
+    .sum = 0
+};
+
+/**
  * @brief   Clamping parameters for 8-bit grayscale images, with a minimum of 0 and a maximum of 255.
  * This can be used as the clamp argument for convolution functions when processing grayscale images.
  */

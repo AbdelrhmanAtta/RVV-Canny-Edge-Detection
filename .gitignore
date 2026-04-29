@@ -45,3 +45,5 @@ html/
 latex/
 .venv/
 
+# Pictures
+assets/
