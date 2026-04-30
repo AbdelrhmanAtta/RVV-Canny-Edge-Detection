@@ -23,15 +23,11 @@ template <typename PixelT = uint8_t, typename OutputT = int16_t>
                                 OutputT* __restrict buffer_x,
                                 OutputT* __restrict buffer_y)
 {
-    if(!image.height || !image.width || !image.aligned_buffer_size)
+    if(!image.height || !image.width || !image.aligned_buffer_size || !image.buffer)
     {
-        return Status::E_NOK;
+        return image.buffer ? Status::E_NOK : Status::E_INVAL_PTR;
     }
-    if (!image.buffer)
-    {
-        return Status::E_INVAL_PTR; 
-    }
-
+    
     for(uint32_t y = 0; y <= image.height; ++y)
     {
         const uint32_t y_top = (0 == y) ? 0 : y - 1;

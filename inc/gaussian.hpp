@@ -8,6 +8,8 @@
 #include "std_types.hpp"
 #include "utils.hpp"
 #include <algorithm>
+#include <cstdint>
+#include <memory>
 #include <vector>
 #include <cmath>
 
@@ -42,19 +44,22 @@ template <typename PixelT = uint8_t, typename AccumulatorT = int32_t>
 
     const int32_t width = static_cast<int32_t>(image.width);
     const int32_t height = static_cast<int32_t>(image.height);
-    const int32_t pad = 2;
+    const int32_t kernel_radius = 2;
     
-    const uint32_t pw = width + 2 * pad;
-    const uint32_t ph = height + 2 * pad;
+    const uint32_t pw = width + 2 * kernel_radius;
+    const uint32_t ph = height + 2 * kernel_radius;
     auto padded_input = std::make_unique<PixelT[]>(pw * ph); 
     std::fill(padded_input.get(), padded_input.get() + (pw * ph), 0);
 
     for (int32_t y = 0; y < height; ++y) {
-        std::copy_n(&image.buffer[y * width], width, &padded_input[(y + pad) * pw + pad]);
+        std::copy_n(&image.buffer[y * width], width, &padded_input[(y + kernel_radius) * pw + kernel_radius]);
     }
 
     auto raw_out = static_cast<PixelT*>(utils::memory::aligned_alloc(64, image.aligned_buffer_size));
-    if (!raw_out) return Status::E_ALLOC_FAIL;
+    if (!raw_out)
+    {
+        return Status::E_ALLOC_FAIL;
+    }
 
     std::unique_ptr<PixelT[], utils::memory::deleter> output_buffer(raw_out);
 
@@ -65,13 +70,13 @@ template <typename PixelT = uint8_t, typename AccumulatorT = int32_t>
         for (int32_t x = 0; x < width; ++x) {
             AccumulatorT sum = 0;
             
-            for (int32_t ky = -pad; ky <= pad; ++ky) {
-                const uint32_t row_off = (y + pad + ky) * pw;
-                const uint32_t k_off = (ky + pad) * 5;
+            for (int32_t ky = -kernel_radius; ky <= kernel_radius; ++ky) {
+                const uint32_t row_offset = (y + kernel_radius + ky) * pw;
+                const uint32_t kernel_offset = (ky + kernel_radius) * 5;
                 
-                for (int32_t kx = -pad; kx <= pad; ++kx) {
-                    sum += static_cast<AccumulatorT>(padded_input[row_off + (x + pad + kx)]) * 
-                           static_cast<AccumulatorT>(GAUSSIAN_5x5_DATA[k_off + (kx + pad)]);
+                for (int32_t kx = -kernel_radius; kx <= kernel_radius; ++kx) {
+                    sum += static_cast<AccumulatorT>(padded_input[row_offset + (x + kernel_radius + kx)]) * 
+                           static_cast<AccumulatorT>(GAUSSIAN_5x5_DATA[kernel_offset + (kx + kernel_radius)]);
                 }
             }
 
@@ -101,29 +106,29 @@ template <typename PixelT = uint8_t, typename AccumulatorT = int32_t>
 
     const int32_t width = static_cast<int32_t>(image.width);
     const int32_t height = static_cast<int32_t>(image.height);
-    const int32_t pad = 2;
+    const int32_t kernel_radius = 2;
 
-    const uint32_t pw = width + 2 * pad;
-    const uint32_t ph = height + 2 * pad;
+    const uint32_t pw = width + 2 * kernel_radius;
+    const uint32_t ph = height + 2 * kernel_radius;
     
     auto padded_input = std::make_unique<PixelT[]>(pw * ph);
     std::fill(padded_input.get(), padded_input.get() + (pw * ph), 0);
 
     for (int32_t y = 0; y < height; ++y) {
-        std::copy_n(&image.buffer[y * width], width, &padded_input[(y + pad) * pw + pad]);
+        std::copy_n(&image.buffer[y * width], width, &padded_input[(y + kernel_radius) * pw + kernel_radius]);
     }
 
     auto inter_buffer = std::make_unique<AccumulatorT[]>(pw * ph);
 
     for (uint32_t y = 0; y < ph; ++y) {
-        for (uint32_t x = pad; x < pw - pad; ++x) {
+        for (uint32_t x = kernel_radius; x < pw - kernel_radius; ++x) {
             AccumulatorT sum = 0;
-            const uint32_t row_off = y * pw;
-            for (int32_t kx = -pad; kx <= pad; ++kx) {
-                sum += static_cast<AccumulatorT>(padded_input[row_off + (x + kx)]) * 
-                       static_cast<AccumulatorT>(GAUSSIAN_5x5_1D_DATA[kx + pad]);
+            const uint32_t row_offset = y * pw;
+            for (int32_t kx = -kernel_radius; kx <= kernel_radius; ++kx) {
+                sum += static_cast<AccumulatorT>(padded_input[row_offset + (x + kx)]) * 
+                       static_cast<AccumulatorT>(GAUSSIAN_5x5_1D_DATA[kx + kernel_radius]);
             }
-            inter_buffer[row_off + x] = sum;
+            inter_buffer[row_offset + x] = sum;
         }
     }
 
@@ -137,10 +142,10 @@ template <typename PixelT = uint8_t, typename AccumulatorT = int32_t>
     for (int32_t y = 0; y < height; ++y) {
         for (int32_t x = 0; x < width; ++x) {
             AccumulatorT sum = 0;
-            const uint32_t col_x = x + pad;
-            for (int32_t ky = -pad; ky <= pad; ++ky) {
-                sum += inter_buffer[(y + pad + ky) * pw + col_x] * 
-                       static_cast<AccumulatorT>(GAUSSIAN_5x5_1D_DATA[ky + pad]);
+            const uint32_t col_x = x + kernel_radius;
+            for (int32_t ky = -kernel_radius; ky <= kernel_radius; ++ky) {
+                sum += inter_buffer[(y + kernel_radius + ky) * pw + col_x] * 
+                       static_cast<AccumulatorT>(GAUSSIAN_5x5_1D_DATA[ky + kernel_radius]);
             }
 
             sum = static_cast<AccumulatorT>((static_cast<uint64_t>(sum) * multiplier) >> shift);
