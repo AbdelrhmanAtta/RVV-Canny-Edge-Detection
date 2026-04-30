@@ -1,6 +1,6 @@
 /**
- * @file    math.hpp
- * @brief   Mathematical utilities for image processing operations.
+ * @file    gaussian.hpp
+ * @brief   Guassian blur implementations for image processing.
  */
 
 #pragma once
@@ -8,29 +8,29 @@
 #include "std_types.hpp"
 #include <algorithm>
 #include <vector>
+#include <cmath>
 
-namespace processing::convolution
+namespace processing::gaussian
 {
 /**
- * @brief   Applies a spatial convolution to an image using the provided kernel.
- * The function supports edge clamping to handle borders and optional output clamping.
+ * @brief   Applies a Gaussian blur to an image using spatial convolution.
  * @tparam  ClampT          Whether to apply clamping to the output values.
  * @tparam  PixelT          The pixel component type (e.g., uint8_t, uint16_t, float).
  * @tparam  KernelT         The kernel component type (e.g., uint8_t, uint16_t).
  * @tparam  AccumulatorT    The type used for accumulating convolution sums to prevent overflow (e.g., int32_t, uint32_t).
  * @param   image           The input image metadata and buffer.
- * @param   image_output    Pointer to the output buffer where the convolved image will be stored.
- * @param   kernel          The convolution kernel structure (contains data, dimensions, and sum).
+ * @param   image_output    Pointer to the output buffer where the blurred image will be stored.
+ * @param   kernel          The Gaussian blur kernel structure (contains data, dimensions, and sum).
  * @param   clamp           The clamping parameters (min and max values) to apply if ClampT is true.
  * @return  Status          Status error code on failure.
- * @note    The output buffer must be pre-allocated and large enough to hold the convolved image data.
- * @note    If clamping is required, ClampT must be set to true.
+ * @note    The output buffer must be pre-allocated and large enough to hold the blurred image data.
+ * @note    If clamping is required, ClampT must be set to true
  */
 template <bool ClampT = false, typename PixelT = uint8_t, typename KernelT = uint8_t, typename AccumulatorT = int32_t>
 [[nodiscard]] Status spatial(const image::io::metadata_t<PixelT>& image,
                             PixelT* image_output,
-                            const kernel_t<KernelT, AccumulatorT>& kernel,
-                            const clamp_t<PixelT>& clamp={})
+                            const processing::kernel_t<KernelT, AccumulatorT>& kernel,
+                            const processing::clamp_t<PixelT>& clamp={})
 {
     if(!kernel.height || !kernel.width || !kernel.data
         || !image.height || !image.width || !image.aligned_buffer_size)
@@ -45,6 +45,14 @@ template <bool ClampT = false, typename PixelT = uint8_t, typename KernelT = uin
     const uint8_t kernel_horizontal_radius = (kernel.width-1)/2;
     const uint8_t kernel_vertical_radius = (kernel.height-1)/2;
     const bool normalize = kernel.sum != 0;
+    const uint32_t shift = 32;
+    uint64_t multiplier = 0;
+
+    if(normalize)
+    {
+        uint64_t divisor = static_cast<uint64_t>(kernel.sum);
+        multiplier = (1ULL<<shift)/divisor;
+    }
  
     for(uint32_t y=0; y<image.height; ++y)
     {
@@ -67,7 +75,7 @@ template <bool ClampT = false, typename PixelT = uint8_t, typename KernelT = uin
             }
             if(normalize)
             {
-                convolution_sum/=kernel.sum;
+                convolution_sum = static_cast<AccumulatorT>((static_cast<uint64_t>(convolution_sum)*multiplier)>>shift);
             }
     
             if constexpr(ClampT)
@@ -81,27 +89,26 @@ template <bool ClampT = false, typename PixelT = uint8_t, typename KernelT = uin
     }
     return Status::E_OK;
 }
- 
+
 /**
- * @brief   Applies a separable convolution to an image using the provided kernel.
- * The function supports edge clamping to handle borders and optional output clamping.
+ * @brief   Applies a Gaussian blur to an image using separable convolution.
  * @tparam  ClampT          Whether to apply clamping to the output values.
  * @tparam  PixelT          The pixel component type (e.g., uint8_t, uint16_t, float).
  * @tparam  KernelT         The kernel component type (e.g., uint8_t, uint16_t).
  * @tparam  AccumulatorT    The type used for accumulating convolution sums to prevent overflow (e.g., int32_t, uint32_t).
  * @param   image           The input image metadata and buffer.
- * @param   image_output    Pointer to the output buffer where the convolved image will be stored.
- * @param   kernel          The convolution kernel structure (contains data, dimensions, and sum).
+ * @param   image_output    Pointer to the output buffer where the blurred image will be stored.
+ * @param   kernel          The Gaussian blur kernel structure (contains data, dimensions, and sum).
  * @param   clamp           The clamping parameters (min and max values) to apply if ClampT is true.
  * @return  Status          Status error code on failure.
- * @note    The output buffer must be pre-allocated and large enough to hold the convolved image data.
- * @note    If clamping is required, ClampT must be set to true.
+ * @note    The output buffer must be pre-allocated and large enough to hold the blurred image data.
+ * @note    If clamping is required, ClampT must be set to true
  */
 template <bool ClampT = false, typename PixelT = uint8_t, typename KernelT = uint8_t, typename AccumulatorT = int32_t>
 [[nodiscard]] Status separable(const image::io::metadata_t<PixelT>& image,
-                                PixelT* image_output,
-                                const kernel_t<KernelT, AccumulatorT>& kernel,
-                                const clamp_t<PixelT>& clamp={})
+                            PixelT* image_output,
+                            const processing::kernel_t<KernelT, AccumulatorT>& kernel,
+                            const processing::clamp_t<PixelT>& clamp={})
 {
     if(!kernel.height || !kernel.width || !kernel.data
         || !image.height || !image.width || !image.aligned_buffer_size)
@@ -116,6 +123,13 @@ template <bool ClampT = false, typename PixelT = uint8_t, typename KernelT = uin
     std::vector<AccumulatorT> output_buffer(image.width*image.height);
     const uint8_t kernel_radius = std::max((kernel.width-1)/2, (kernel.height-1)/2);
     const bool normalize = kernel.sum != 0;
+    const uint32_t shift = 32;
+    uint64_t multiplier = 0;
+
+    if(normalize) {
+        uint64_t total_divisor = (uint64_t)kernel.sum * kernel.sum;
+        multiplier = (1ULL << shift) / total_divisor;
+    }
  
     for(uint32_t y=0; y<image.height; ++y)
     {
@@ -147,7 +161,7 @@ template <bool ClampT = false, typename PixelT = uint8_t, typename KernelT = uin
             }
             if(normalize)
             {
-                convolution_sum/=(kernel.sum*kernel.sum);
+                convolution_sum = (AccumulatorT)((uint64_t)convolution_sum*multiplier>>shift);
             }
             if constexpr(ClampT)
             {
@@ -159,7 +173,8 @@ template <bool ClampT = false, typename PixelT = uint8_t, typename KernelT = uin
     }
     return Status::E_OK;
 }
- 
+
+/*-------------------------------------------------- KERNELS & CLAMPS --------------------------------------------------*/
 /**
  * @brief   3x3 Gaussian blur kernel and its 1D separable counterpart.
  * The 3x3 kernel is normalized by a factor of 16 and sigma approximately 0.85.
@@ -245,38 +260,6 @@ inline constexpr kernel_t<uint8_t, uint32_t> GAUSSIAN_7x7_1D =
 };
 
 /**
- * @brief   3x3 Sobel Filter kernel and its 1D separable counterpart.
- * The Sobel filter is used for edge detection, with the horizontal kernel detecting vertical edges and the vertical kernel detecting horizontal edges.
- * The kernels are not normalized, and the sum is set to 0 to indicate that no normalization should be applied.
- */
-inline constexpr int8_t SOBEL_HORIZONTAL_3x3_DATA[] = 
-{
-    -1, 0, 1,
-    -2, 0, 2,
-    -1, 0, 1
-};
-inline constexpr kernel_t<int8_t, uint16_t> SOBEL_HORIZONTAL_3x3 =
-{
-    .data = SOBEL_HORIZONTAL_3x3_DATA,
-    .width = 3,
-    .height = 3,
-    .sum = 0
-};
-inline constexpr int8_t SOBEL_VERTICAL_3x3_DATA[] = 
-{
-    -1, -2, -1,
-    0, 0, 0,
-    1, 2, 1
-};
-inline constexpr kernel_t<int8_t, uint16_t> SOBEL_VERTICAL_3x3 =
-{
-    .data = SOBEL_VERTICAL_3x3_DATA,
-    .width = 3,
-    .height = 3,
-    .sum = 0
-};
-
-/**
  * @brief   Clamping parameters for 8-bit grayscale images, with a minimum of 0 and a maximum of 255.
  * This can be used as the clamp argument for convolution functions when processing grayscale images.
  */
@@ -286,4 +269,4 @@ inline constexpr clamp_t<uint8_t> GREYSCALE_CLAMP =
     .clamp_max = 255
 };
 
-} // namespace processing::convolution
+} // namespace processing::filters

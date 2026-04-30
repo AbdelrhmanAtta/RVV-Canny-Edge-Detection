@@ -46,7 +46,7 @@ struct metadata_t
 
 } // namespace image::io
 
-namespace processing::convolution
+namespace processing
 {
 /**
  * @brief   Structure representing a convolution kernel, including its data, dimensions, and normalization sum.
