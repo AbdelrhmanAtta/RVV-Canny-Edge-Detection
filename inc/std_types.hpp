@@ -45,32 +45,3 @@ struct metadata_t
 };
 
 } // namespace image::io
-
-namespace processing
-{
-/**
- * @brief   Structure representing a convolution kernel, including its data, dimensions, and normalization sum.
- * @tparam  KernelT         The data type of the kernel elements (e.g., uint8_t, uint16_t).
- * @tparam  AccumulatorT    The data type used for accumulating convolution sums to prevent overflow (e.g., int32_t, uint32_t).
- */
-template <typename KernelT = uint8_t, typename AccumulatorT = int32_t>
-struct kernel_t
-{
-    const KernelT* data;
-    uint8_t width;
-    uint8_t height;
-    AccumulatorT sum;
-};
-
-/**
- * @brief   Structure for defining clamping parameters to constrain output pixel values within a specified range.
- * @tparam  PixelT The data type of the pixel values (e.g., uint8_t, uint16_t).
- */
-template <typename PixelT = uint8_t>
-struct clamp_t
-{
-    PixelT clamp_min;
-    PixelT clamp_max;
-};
-
-} // namespace processing::convolution
