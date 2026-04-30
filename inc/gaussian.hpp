@@ -1,206 +1,18 @@
 /**
  * @file    gaussian.hpp
- * @brief   Guassian blur implementations for image processing.
+ * @brief   Gaussian blur implementations for image processing.
  */
 
 #pragma once
 
 #include "std_types.hpp"
+#include "utils.hpp"
 #include <algorithm>
 #include <vector>
 #include <cmath>
 
 namespace processing::gaussian
 {
-/**
- * @brief   Applies a Gaussian blur to an image using spatial convolution.
- * @tparam  ClampT          Whether to apply clamping to the output values.
- * @tparam  PixelT          The pixel component type (e.g., uint8_t, uint16_t, float).
- * @tparam  KernelT         The kernel component type (e.g., uint8_t, uint16_t).
- * @tparam  AccumulatorT    The type used for accumulating convolution sums to prevent overflow (e.g., int32_t, uint32_t).
- * @param   image           The input image metadata and buffer.
- * @param   image_output    Pointer to the output buffer where the blurred image will be stored.
- * @param   kernel          The Gaussian blur kernel structure (contains data, dimensions, and sum).
- * @param   clamp           The clamping parameters (min and max values) to apply if ClampT is true.
- * @return  Status          Status error code on failure.
- * @note    The output buffer must be pre-allocated and large enough to hold the blurred image data.
- * @note    If clamping is required, ClampT must be set to true
- */
-template <bool ClampT = false, typename PixelT = uint8_t, typename KernelT = uint8_t, typename AccumulatorT = int32_t>
-[[nodiscard]] Status spatial(const image::io::metadata_t<PixelT>& image,
-                            PixelT* image_output,
-                            const processing::kernel_t<KernelT, AccumulatorT>& kernel,
-                            const processing::clamp_t<PixelT>& clamp={})
-{
-    if(!kernel.height || !kernel.width || !kernel.data
-        || !image.height || !image.width || !image.aligned_buffer_size)
-    {
-        return Status::E_NOK;
-    }
-    if (!image.buffer)
-    {
-        return Status::E_INVAL_PTR; 
-    }
- 
-    const uint8_t kernel_horizontal_radius = (kernel.width-1)/2;
-    const uint8_t kernel_vertical_radius = (kernel.height-1)/2;
-    const bool normalize = kernel.sum != 0;
-    const uint32_t shift = 32;
-    uint64_t multiplier = 0;
-
-    if(normalize)
-    {
-        uint64_t divisor = static_cast<uint64_t>(kernel.sum);
-        multiplier = (1ULL<<shift)/divisor;
-    }
- 
-    for(uint32_t y=0; y<image.height; ++y)
-    {
-        for(uint32_t x=0; x<image.width; ++x)
-        {
-            AccumulatorT convolution_sum=0;
- 
-            for(int32_t ky=-kernel_vertical_radius; ky<=kernel_vertical_radius; ++ky)
-            {
-                const int32_t ny = std::max(0, std::min(ky+static_cast<int32_t>(y), static_cast<int32_t>(image.height)-1));
-                const uint32_t row_offset = ny * image.width; 
-                const int32_t k_row_offset = (ky + kernel_vertical_radius) * kernel.width;
-                
-                for(int32_t kx=-kernel_horizontal_radius; kx<=kernel_horizontal_radius; ++kx)
-                {
-                    const int32_t nx = std::max(0, std::min(kx+static_cast<int32_t>(x), static_cast<int32_t>(image.width)-1));
-                    convolution_sum += static_cast<AccumulatorT>(image.buffer[row_offset+nx])
-                                        *kernel.data[k_row_offset+(kx+kernel_horizontal_radius)];
-                }
-            }
-            if(normalize)
-            {
-                convolution_sum = static_cast<AccumulatorT>((static_cast<uint64_t>(convolution_sum)*multiplier)>>shift);
-            }
-    
-            if constexpr(ClampT)
-            {
-                convolution_sum = std::max(static_cast<AccumulatorT>(clamp.clamp_min), 
-                                            std::min(convolution_sum, static_cast<AccumulatorT>(clamp.clamp_max)));
-            }
-    
-            image_output[y*image.width+x] = static_cast<PixelT>(convolution_sum);
-        }
-    }
-    return Status::E_OK;
-}
-
-/**
- * @brief   Applies a Gaussian blur to an image using separable convolution.
- * @tparam  ClampT          Whether to apply clamping to the output values.
- * @tparam  PixelT          The pixel component type (e.g., uint8_t, uint16_t, float).
- * @tparam  KernelT         The kernel component type (e.g., uint8_t, uint16_t).
- * @tparam  AccumulatorT    The type used for accumulating convolution sums to prevent overflow (e.g., int32_t, uint32_t).
- * @param   image           The input image metadata and buffer.
- * @param   image_output    Pointer to the output buffer where the blurred image will be stored.
- * @param   kernel          The Gaussian blur kernel structure (contains data, dimensions, and sum).
- * @param   clamp           The clamping parameters (min and max values) to apply if ClampT is true.
- * @return  Status          Status error code on failure.
- * @note    The output buffer must be pre-allocated and large enough to hold the blurred image data.
- * @note    If clamping is required, ClampT must be set to true
- */
-template <bool ClampT = false, typename PixelT = uint8_t, typename KernelT = uint8_t, typename AccumulatorT = int32_t>
-[[nodiscard]] Status separable(const image::io::metadata_t<PixelT>& image,
-                            PixelT* image_output,
-                            const processing::kernel_t<KernelT, AccumulatorT>& kernel,
-                            const processing::clamp_t<PixelT>& clamp={})
-{
-    if(!kernel.height || !kernel.width || !kernel.data
-        || !image.height || !image.width || !image.aligned_buffer_size)
-    {
-        return Status::E_NOK;
-    }
-    if (!image.buffer)
-    {
-        return Status::E_INVAL_PTR; 
-    }
- 
-    std::vector<AccumulatorT> output_buffer(image.width*image.height);
-    const uint8_t kernel_radius = std::max((kernel.width-1)/2, (kernel.height-1)/2);
-    const bool normalize = kernel.sum != 0;
-    const uint32_t shift = 32;
-    uint64_t multiplier = 0;
-
-    if(normalize) {
-        uint64_t total_divisor = (uint64_t)kernel.sum * kernel.sum;
-        multiplier = (1ULL << shift) / total_divisor;
-    }
- 
-    for(uint32_t y=0; y<image.height; ++y)
-    {
-        const uint32_t offset = y*image.width;
-        for(uint32_t x=0; x<image.width; ++x)
-        {
-            AccumulatorT convolution_sum=0;
-            for(int32_t kx=-kernel_radius; kx<=kernel_radius; ++kx)
-            {
-                const int32_t nx = std::max(0, std::min(kx+static_cast<int32_t>(x), static_cast<int32_t>(image.width)-1));
-                convolution_sum += static_cast<AccumulatorT>(image.buffer[offset+nx])
-                                                            *kernel.data[kx+kernel_radius];
-            }
-            output_buffer[y*image.width+x] = convolution_sum;
-        }
-    }
- 
-    for(uint32_t y=0; y<image.height; ++y)
-    {
-        const uint32_t offset = y*image.width;
-        for(uint32_t x=0; x<image.width; ++x)
-        {
-            AccumulatorT convolution_sum=0;
-            for(int32_t ky=-kernel_radius; ky<=kernel_radius; ++ky)
-            {
-                const int32_t ny = std::max(0, std::min(ky+static_cast<int32_t>(y), static_cast<int32_t>(image.height)-1));
-                convolution_sum += static_cast<AccumulatorT>(output_buffer[ny*image.width+x])
-                                                            *kernel.data[ky+kernel_radius];
-            }
-            if(normalize)
-            {
-                convolution_sum = (AccumulatorT)((uint64_t)convolution_sum*multiplier>>shift);
-            }
-            if constexpr(ClampT)
-            {
-                convolution_sum = std::max(static_cast<AccumulatorT>(clamp.clamp_min), 
-                                            std::min(convolution_sum, static_cast<AccumulatorT>(clamp.clamp_max)));
-            }
-            image_output[offset+x] = static_cast<PixelT>(convolution_sum);
-        }
-    }
-    return Status::E_OK;
-}
-
-/*-------------------------------------------------- KERNELS & CLAMPS --------------------------------------------------*/
-/**
- * @brief   3x3 Gaussian blur kernel and its 1D separable counterpart.
- * The 3x3 kernel is normalized by a factor of 16 and sigma approximately 0.85.
- */
-inline constexpr uint8_t GAUSSIAN_3x3_DATA[] =
-{
-    1, 2, 1,
-    2, 4, 2,
-    1, 2, 1
-};
-inline constexpr uint8_t GAUSSIAN_3x3_1D_DATA[3] = {1, 2, 1};
-inline constexpr kernel_t<uint8_t, uint16_t> GAUSSIAN_3x3 = 
-{
-    .data = GAUSSIAN_3x3_DATA,
-    .width = 3,
-    .height = 3,
-    .sum = 16
-};
-inline constexpr kernel_t<uint8_t, uint16_t> GAUSSIAN_3x3_1D = 
-{
-    .data = GAUSSIAN_3x3_1D_DATA,
-    .width = 3,
-    .height = 1,
-    .sum = 4
-};
-
 /**
  * @brief   5x5 Gaussian blur kernel and its 1D separable counterpart.
  * The 5x5 kernel is normalized by a factor of 273 and sigma approximately 1.
@@ -214,59 +26,132 @@ inline constexpr uint8_t GAUSSIAN_5x5_DATA[] =
     1,  4,  7,  4, 1
 };
 inline constexpr uint8_t GAUSSIAN_5x5_1D_DATA[] = {1, 4, 7, 4, 1};
-inline constexpr kernel_t<uint8_t, uint32_t> GAUSSIAN_5x5 = 
-{
-    .data = GAUSSIAN_5x5_DATA,
-    .width = 5,
-    .height = 5,
-    .sum = 273
-};  
-inline constexpr kernel_t<uint8_t, uint32_t> GAUSSIAN_5x5_1D = 
-{
-    .data = GAUSSIAN_5x5_1D_DATA,
-    .width = 5,
-    .height = 1,
-    .sum = 17
-};
 
 /**
- * @brief   7x7 Gaussian blur kernel and its 1D separable counterpart.
- * The 7x7 kernel is normalized by a factor of 1111 and sigma approximately 1.4.
+ * @brief   Applies a 5x5 Gaussian blur to the input image using direct convolution.
+ * @param   image The input image metadata, which will be modified in-place with the blurred output.
+ * @return  Status indicating success or failure of the operation.
  */
-inline constexpr uint8_t GAUSSIAN_7x7_DATA[] = 
+template <typename PixelT = uint8_t, typename AccumulatorT = int32_t>
+[[nodiscard]] Status spatial_5x5(image::io::metadata_t<PixelT>& image)
 {
-    0,  0,  1,   2,  1,  0, 0,
-    0,  3, 13,  22, 13,  3, 0,
-    1, 13, 59,  97, 59, 13, 1,
-    2, 22, 97, 159, 97, 22, 2,
-    1, 13, 59,  97, 59, 13, 1,
-    0,  3, 13,  22, 13,  3, 0,
-    0,  0,  1,   2,  1,  0, 0
-};
-inline constexpr uint8_t GAUSSIAN_7x7_1D_DATA[] = {1, 3, 7, 11, 7, 3, 1};
-inline constexpr kernel_t<uint8_t, uint32_t> GAUSSIAN_7x7 = 
-{
-    .data = GAUSSIAN_7x7_DATA,
-    .width = 7,
-    .height = 7,
-    .sum = 1111
-};
-inline constexpr kernel_t<uint8_t, uint32_t> GAUSSIAN_7x7_1D = 
-{
-    .data = GAUSSIAN_7x7_1D_DATA,
-    .width = 7,
-    .height = 1,
-    .sum = 33
-};
+    if (!image.height || !image.width || !image.buffer)
+    {
+        return image.buffer ? Status::E_NOK : Status::E_INVAL_PTR;
+    }
+
+    const int32_t width = static_cast<int32_t>(image.width);
+    const int32_t height = static_cast<int32_t>(image.height);
+    const int32_t pad = 2;
+    
+    const uint32_t pw = width + 2 * pad;
+    const uint32_t ph = height + 2 * pad;
+    auto padded_input = std::make_unique<PixelT[]>(pw * ph); 
+    std::fill(padded_input.get(), padded_input.get() + (pw * ph), 0);
+
+    for (int32_t y = 0; y < height; ++y) {
+        std::copy_n(&image.buffer[y * width], width, &padded_input[(y + pad) * pw + pad]);
+    }
+
+    auto raw_out = static_cast<PixelT*>(utils::memory::aligned_alloc(64, image.aligned_buffer_size));
+    if (!raw_out) return Status::E_ALLOC_FAIL;
+
+    std::unique_ptr<PixelT[], utils::memory::deleter> output_buffer(raw_out);
+
+    constexpr uint32_t shift = 16;
+    constexpr uint64_t multiplier = (1ULL << shift) / 273;
+
+    for (int32_t y = 0; y < height; ++y) {
+        for (int32_t x = 0; x < width; ++x) {
+            AccumulatorT sum = 0;
+            
+            for (int32_t ky = -pad; ky <= pad; ++ky) {
+                const uint32_t row_off = (y + pad + ky) * pw;
+                const uint32_t k_off = (ky + pad) * 5;
+                
+                for (int32_t kx = -pad; kx <= pad; ++kx) {
+                    sum += static_cast<AccumulatorT>(padded_input[row_off + (x + pad + kx)]) * 
+                           static_cast<AccumulatorT>(GAUSSIAN_5x5_DATA[k_off + (kx + pad)]);
+                }
+            }
+
+            sum = static_cast<AccumulatorT>((static_cast<uint64_t>(sum) * multiplier) >> shift);
+            sum = (sum < 0) ? 0 : (sum > 255) ? 255 : sum;
+            
+            output_buffer[y * width + x] = static_cast<PixelT>(sum);
+        }
+    }
+
+    image.buffer = std::move(output_buffer);
+    return Status::E_OK;
+}
 
 /**
- * @brief   Clamping parameters for 8-bit grayscale images, with a minimum of 0 and a maximum of 255.
- * This can be used as the clamp argument for convolution functions when processing grayscale images.
+ * @brief   Applies a 5x5 Gaussian blur to the input image using separable convolution.
+ * @param   image The input image metadata, which will be modified in-place with the blurred output.
+ * @return  Status indicating success or failure of the operation.
  */
-inline constexpr clamp_t<uint8_t> GREYSCALE_CLAMP = 
+template <typename PixelT = uint8_t, typename AccumulatorT = int32_t>
+[[nodiscard]] Status separable_5x5(image::io::metadata_t<PixelT>& image)
 {
-    .clamp_min = 0,
-    .clamp_max = 255
-};
+    if (!image.height || !image.width || !image.buffer)
+    {
+        return image.buffer ? Status::E_NOK : Status::E_INVAL_PTR;
+    }
 
-} // namespace processing::filters
+    const int32_t width = static_cast<int32_t>(image.width);
+    const int32_t height = static_cast<int32_t>(image.height);
+    const int32_t pad = 2;
+
+    const uint32_t pw = width + 2 * pad;
+    const uint32_t ph = height + 2 * pad;
+    
+    auto padded_input = std::make_unique<PixelT[]>(pw * ph);
+    std::fill(padded_input.get(), padded_input.get() + (pw * ph), 0);
+
+    for (int32_t y = 0; y < height; ++y) {
+        std::copy_n(&image.buffer[y * width], width, &padded_input[(y + pad) * pw + pad]);
+    }
+
+    auto inter_buffer = std::make_unique<AccumulatorT[]>(pw * ph);
+
+    for (uint32_t y = 0; y < ph; ++y) {
+        for (uint32_t x = pad; x < pw - pad; ++x) {
+            AccumulatorT sum = 0;
+            const uint32_t row_off = y * pw;
+            for (int32_t kx = -pad; kx <= pad; ++kx) {
+                sum += static_cast<AccumulatorT>(padded_input[row_off + (x + kx)]) * 
+                       static_cast<AccumulatorT>(GAUSSIAN_5x5_1D_DATA[kx + pad]);
+            }
+            inter_buffer[row_off + x] = sum;
+        }
+    }
+
+    auto raw_out = static_cast<PixelT*>(utils::memory::aligned_alloc(64, image.aligned_buffer_size));
+    if (!raw_out) return Status::E_ALLOC_FAIL;
+    std::unique_ptr<PixelT[], utils::memory::deleter> output_buffer(raw_out);
+
+    constexpr uint32_t shift = 16;
+    constexpr uint64_t multiplier = (1ULL << shift) / 273;
+
+    for (int32_t y = 0; y < height; ++y) {
+        for (int32_t x = 0; x < width; ++x) {
+            AccumulatorT sum = 0;
+            const uint32_t col_x = x + pad;
+            for (int32_t ky = -pad; ky <= pad; ++ky) {
+                sum += inter_buffer[(y + pad + ky) * pw + col_x] * 
+                       static_cast<AccumulatorT>(GAUSSIAN_5x5_1D_DATA[ky + pad]);
+            }
+
+            sum = static_cast<AccumulatorT>((static_cast<uint64_t>(sum) * multiplier) >> shift);
+            sum = (sum < 0) ? 0 : (sum > 255) ? 255 : sum;
+
+            output_buffer[y * width + x] = static_cast<PixelT>(sum);
+        }
+    }
+
+    image.buffer = std::move(output_buffer);
+    return Status::E_OK;
+}
+
+} // namespace processing::gaussian
