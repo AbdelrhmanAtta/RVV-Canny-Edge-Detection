@@ -7,6 +7,7 @@
 
 #include "std_types.hpp"
 #include "utils.hpp"
+#include <cstdint>
 #include <math.h>
 #include <memory>
 
@@ -92,6 +93,54 @@ template <typename PixelT = uint8_t, typename GradientT = int16_t, typename MagT
     for(uint32_t i = 0; i < image.pixel_count; ++i) 
     {
         image.buffer[i] = static_cast<PixelT>(pointer_buffer[i] * scale);
+    }
+
+    return Status::E_OK;
+}
+
+template <typename PixelT = uint8_t, typename GradientT = int32_t>
+[[nodiscard]] Status direction(const image::io::metadata_t<PixelT>& image,
+                                const GradientT* __restrict Gx,
+                                const GradientT* __restrict Gy)
+{
+    if(!image.height || !image.width || !image.aligned_buffer_size || !image.buffer
+    || !Gx || !Gy)
+    {
+        return (image.buffer && Gx && Gy) ? Status::E_NOK : Status::E_INVAL_PTR;
+    }
+
+    GradientT x;
+    GradientT y;
+    uint16_t abs_x;
+    uint16_t abs_y;
+    uint8_t angle;
+    for(uint32_t i = 0; i < image.pixel_count; ++i)
+    {
+        x = std::abs(Gx[i]);
+        y = std::abs(Gy[i]);
+        abs_x = static_cast<uint16_t>(x);
+        abs_y = static_cast<uint16_t>(y);
+
+        if((abs_y * 5) > (abs_x * 12))
+        {
+            angle = 90;
+        }
+        else if((abs_y * 5) > (abs_x * 2))
+        {
+            angle = 0;
+        }
+        else
+        {
+            if(((x > 0) && (y > 0)) || ((x < 0) && (y < 0)))
+            {
+                angle = 45;
+            }
+            else
+            {
+                angle = 135;
+            }
+        }
+        image.buffer[i] = angle;
     }
 
     return Status::E_OK;
