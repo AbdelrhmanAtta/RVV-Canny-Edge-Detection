@@ -27,10 +27,10 @@ int main()
     img_separable.pixel_count = pixel_count;
     img_separable.aligned_buffer_size = aligned_size;
 
-    stat = image::io::load_raw<uint8_t>("circ.raw", img_spatial);
+    stat = image::io::load_raw<uint8_t>("rect.raw", img_spatial);
     if (Status::E_OK != stat) return static_cast<int>(stat);
 
-    stat = image::io::load_raw<uint8_t>("circ.raw", img_separable);
+    stat = image::io::load_raw<uint8_t>("rect.raw", img_separable);
     if (Status::E_OK != stat) return static_cast<int>(stat);
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -41,7 +41,7 @@ int main()
         auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         std::cout << "Spatial Gaussian Blur Time: " << dur.count() << " ms" << std::endl;
         
-        stat = image::io::save_raw<uint8_t>("circ_spatial.raw", img_spatial);
+        stat = image::io::save_raw<uint8_t>("rect_spatial.raw", img_spatial);
         if (Status::E_OK != stat) return static_cast<int>(stat);
     } else {
         return static_cast<int>(stat);
@@ -55,7 +55,7 @@ int main()
         auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         std::cout << "Separable Gaussian Blur Time: " << dur.count() << " ms" << std::endl;
         
-        stat = image::io::save_raw<uint8_t>("circ_separable.raw", img_separable);
+        stat = image::io::save_raw<uint8_t>("rect_separable.raw", img_separable);
         if (Status::E_OK != stat) return static_cast<int>(stat);
     } else {
         return static_cast<int>(stat);

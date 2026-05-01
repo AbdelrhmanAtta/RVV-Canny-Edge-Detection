@@ -30,7 +30,6 @@ struct deleter
  */
 inline void* aligned_alloc(size_t alignment, size_t size) noexcept
 {
-    // Ensure size is a multiple of alignment for std::aligned_alloc
     size_t remainder = size % alignment;
     if (remainder != 0) {
         size += (alignment - remainder);
