@@ -89,14 +89,6 @@ make run VLEN=256  # Simulate mid-range hardware
 
 ---
 
-## Authors
-* A. Atta
-* Ahmed Ameer
-* Aly Gano
-* Marawan Mohamed
-* Mouaz Kfafy
-* Mohamed elHosary
-
 ## Resources & References
 * [Computer Vision: Filters](https://www.youtube.com/watch?v=C_zFhWdM4ic&list=PLzH6n4zXuckoRdljSlM2k35BufTYXNNeF)
 * [RISC-V Vector Quick Intro](https://blog.timhutt.co.uk/riscv-vector/#the-end)
