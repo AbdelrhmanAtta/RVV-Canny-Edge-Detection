@@ -22,7 +22,7 @@ namespace processing
 template <typename PixelT = uint8_t, typename GradientT = int16_t, typename MagT = uint16_t>
 [[nodiscard]] Status l1(const image::io::metadata_t<PixelT>& image,
                         const GradientT* __restrict Gx,
-                        const int16_t* __restrict Gy)
+                        const GradientT* __restrict Gy)
 {
     if(!image.height || !image.width || !image.aligned_buffer_size || !image.buffer
         || !Gx || !Gy)
