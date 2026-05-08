@@ -1,3 +1,8 @@
+/**
+ * @file std_types.hpp
+ * @brief Standard type definitions and common status codes.
+ */
+
 #pragma once
 
 #include "utils.hpp"
@@ -6,13 +11,6 @@
 #include <cstdint>
 #include <expected>
 
-/**
- * @file std_types.hpp
- * @brief Standard type definitions and common status codes.
- *
- * This header provides basic platform-independent types and return
- * status values used across the project.
- */
 
 /**
  * @enum Status
@@ -39,31 +37,11 @@ template <typename PixelT = uint8_t>
 struct metadata_t
 {
     /** @brief RAII pointer to 64-byte aligned pixel data. */
-    std::unique_ptr<PixelT[], utils::memory::deleter> image_buffer;
-    uint32_t image_width;
-    uint32_t image_height;
+    std::unique_ptr<PixelT[], utils::memory::deleter> buffer;
+    uint32_t width;
+    uint32_t height;
     size_t pixel_count;
     size_t aligned_buffer_size;
 };
 
 } // namespace image::io
-
-namespace processing::convolution
-{
-template <typename KernelT = uint8_t, typename AccumulatorT = int32_t>
-struct kernel_t
-{
-    const KernelT* kernel_data;
-    uint8_t kernel_width;
-    uint8_t kernel_height;
-    AccumulatorT kernel_sum;
-};
-
-template <typename PixelT = uint8_t>
-struct clamp_t
-{
-    PixelT clamp_min;
-    PixelT clamp_max;
-};
-
-} // namespace processing::convolution

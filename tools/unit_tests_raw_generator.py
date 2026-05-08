@@ -54,6 +54,28 @@ class UnitTestsRawGenerator:
                     img[y, x] = 255
         return img
 
+    ## @brief Generates a solid black image (all zeros).
+    #  @return A NumPy array representing a full black canvas.
+    def full_black(self):
+        return np.zeros((self.size, self.size), dtype=np.uint8)
+
+    ## @brief Generates a solid white image (all 255s).
+    #  @return A NumPy array representing a full white canvas.
+    def full_white(self):
+        return np.full((self.size, self.size), 255, dtype=np.uint8)
+
+    ## @brief Generates an image where the left half is black and the right half is white.
+    #  @return A NumPy array with the left half black (0) and right half white (255).
+    #  @note Useful for testing vertical edge detection.
+    def half_black_half_white(self):
+        img = np.zeros((self.size, self.size), dtype=np.uint8)
+        img[:, self.size // 2:] = 255
+        return img
+
+    ## @brief Generates a solid grey image.
+    #  @param intensity The grey level (0-255). 128 is standard middle grey.
+    def grey_canvas(self, intensity=128):
+        return np.full((self.size, self.size), intensity, dtype=np.uint8)
 
 if __name__ == "__main__":
     ## @details Entry point for the script. 
@@ -77,7 +99,11 @@ if __name__ == "__main__":
     images = {
         "rect": gen.rectangle()[:image_height, :image_width],
         "circ": gen.circle()[:image_height, :image_width], 
-        "diag": gen.diagonal_edge()[:image_height, :image_width]
+        "diag": gen.diagonal_edge()[:image_height, :image_width],
+        "black": gen.full_black()[:image_height, :image_width],
+        "white": gen.full_white()[:image_height, :image_width],
+        "half_bw": gen.half_black_half_white()[:image_height, :image_width],
+        "grey": gen.grey_canvas(intensity=128)[:image_height, :image_width]
     }
 
     # Save images as raw binary files
