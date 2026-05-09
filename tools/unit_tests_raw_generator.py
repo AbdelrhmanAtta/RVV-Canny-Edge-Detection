@@ -10,7 +10,7 @@ import unittest
 #  This class provides methods to create binary images (0 or 255) containing
 #  rectangles, circles, and diagonal edges for testing image processing algorithms.
 class UnitTestsRawGenerator:
-    
+
     ## @brief Initializes the generator with a square canvas size.
     #  @param size The dimension (width and height) of the square background.
     def __init__(self, size=256):
@@ -25,7 +25,7 @@ class UnitTestsRawGenerator:
         img = self.background.copy()
         img[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]] = 255
         return img
-    
+
     ## @brief Generates a filled white circle on a black background.
     #  @param top_left The upper-left bound of the circle's bounding box.
     #  @param bottom_right The lower-right bound of the circle's bounding box.
@@ -40,7 +40,7 @@ class UnitTestsRawGenerator:
         mask = (X - center_x)**2 + (Y - center_y)**2 <= radius**2
         img[mask] = 255
         return img
-    
+
     ## @brief Generates a diagonal edge (triangle) within a specified bounding box.
     #  @param top_left The upper-left corner of the region of interest.
     #  @param bottom_right The lower-right corner of the region of interest.
@@ -88,6 +88,33 @@ class UnitTestsRawGenerator:
                     img[y, x] = 255
         return img
 
+    ## @brief Generates a fully black image.
+    #  @return A NumPy array filled with zeros.
+    def full_black(self):
+        return self.background.copy()
+
+    ## @brief Generates a fully white image.
+    #  @return A NumPy array filled with 255.
+    def full_white(self):
+        return np.full((self.size, self.size), 255, dtype=np.uint8)
+
+    ## @brief Generates an image with the left half black and the right half white.
+    #  @return A NumPy array split vertically into black (left) and white (right).
+    def half_black_half_white(self):
+        img = self.background.copy()
+        img[:, self.size // 2:] = 255
+        return img
+
+    ## @brief Generates a checkerboard image with two black and two white quadrants.
+    #  @details Top-left and bottom-right quadrants are black; top-right and bottom-left are white.
+    #  @return A NumPy array with a 2x2 quadrant pattern.
+    def two_quarters_black_two_quarters_white(self):
+        img = self.background.copy()
+        mid = self.size // 2
+        img[:mid, mid:] = 255
+        img[mid:, :mid] = 255
+        return img
+
 
 ## @class TestUnitTestsRawGenerator
 #  @brief Unit tests for the UnitTestsRawGenerator class.
@@ -104,7 +131,6 @@ class TestUnitTestsRawGenerator(unittest.TestCase):
 
     def test_circle(self):
         img = self.gen.circle(top_left=(10, 10), bottom_right=(30, 30))
-        # Center is at (20, 20), radius is 10
         self.assertEqual(img[20, 20], 255)
         self.assertEqual(img[0, 0], 0)
 
@@ -120,16 +146,38 @@ class TestUnitTestsRawGenerator(unittest.TestCase):
 
     def test_diagonal_edge(self):
         img = self.gen.diagonal_edge(top_left=(10, 10), bottom_right=(90, 90))
-        # 45 degree: x-x0 > y-y0 -> 255
-        self.assertEqual(img[20, 30], 255)  # 30-10 > 20-10 (20 > 10)
-        self.assertEqual(img[30, 20], 0)    # 20-10 > 30-10 (10 > 20)
+        self.assertEqual(img[20, 30], 255)
+        self.assertEqual(img[30, 20], 0)
 
     def test_diagonal_edge_inv(self):
         img = self.gen.diagonal_edge_inv(top_left=(10, 10), bottom_right=(90, 90))
-        # 135 degree: (x-x0) + (y-y0) < width -> 255
-        # width = 80
-        self.assertEqual(img[20, 20], 255)  # (10) + (10) < 80
-        self.assertEqual(img[80, 80], 0)    # (70) + (70) < 80
+        self.assertEqual(img[20, 20], 255)
+        self.assertEqual(img[80, 80], 0)
+
+    def test_full_black(self):
+        img = self.gen.full_black()
+        self.assertEqual(img.shape, (self.size, self.size))
+        self.assertTrue(np.all(img == 0))
+
+    def test_full_white(self):
+        img = self.gen.full_white()
+        self.assertEqual(img.shape, (self.size, self.size))
+        self.assertTrue(np.all(img == 255))
+
+    def test_half_black_half_white(self):
+        img = self.gen.half_black_half_white()
+        self.assertEqual(img.shape, (self.size, self.size))
+        self.assertEqual(img[50, 10], 0)
+        self.assertEqual(img[50, 90], 255)
+
+    def test_two_quarters_black_two_quarters_white(self):
+        img = self.gen.two_quarters_black_two_quarters_white()
+        self.assertEqual(img.shape, (self.size, self.size))
+        mid = self.size // 2
+        self.assertEqual(img[mid // 2, mid // 2], 0)
+        self.assertEqual(img[mid // 2, mid + mid // 2], 255)
+        self.assertEqual(img[mid + mid // 2, mid // 2], 255)
+        self.assertEqual(img[mid + mid // 2, mid + mid // 2], 0)
 
 
 if __name__ == "__main__":
@@ -137,7 +185,6 @@ if __name__ == "__main__":
         sys.argv.pop(1)
         unittest.main()
     else:
-        # Existing main logic
         try:
             image_width = int(sys.argv[1]) if len(sys.argv) > 1 else 512
             image_height = int(sys.argv[2]) if len(sys.argv) > 2 else image_width
@@ -147,22 +194,23 @@ if __name__ == "__main__":
 
         gen = UnitTestsRawGenerator(size=max(image_height, image_width))
 
-        # Determine paths
         assets_path = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../assets'))
         if not os.path.exists(assets_path):
             os.makedirs(assets_path)
 
-        # Generate image dictionary
         images = {
-            "rect": gen.rectangle()[:image_height, :image_width],
-            "circ": gen.circle()[:image_height, :image_width],
-            "diag": gen.diagonal_edge()[:image_height, :image_width],
-            "diag_inv": gen.diagonal_edge_inv()[:image_height, :image_width],
-            "horiz": gen.horizontal_line()[:image_height, :image_width],
-            "vert": gen.vertical_line()[:image_height, :image_width]
+            "rect":           gen.rectangle()[:image_height, :image_width],
+            "circ":           gen.circle()[:image_height, :image_width],
+            "diag":           gen.diagonal_edge()[:image_height, :image_width],
+            "diag_inv":       gen.diagonal_edge_inv()[:image_height, :image_width],
+            "horiz":          gen.horizontal_line()[:image_height, :image_width],
+            "vert":           gen.vertical_line()[:image_height, :image_width],
+            "full_black":     gen.full_black()[:image_height, :image_width],
+            "full_white":     gen.full_white()[:image_height, :image_width],
+            "half_bw":        gen.half_black_half_white()[:image_height, :image_width],
+            "quad_bw":        gen.two_quarters_black_two_quarters_white()[:image_height, :image_width],
         }
 
-        # Save images as raw binary files
         for filename, data in images.items():
             filepath = os.path.join(assets_path, f"{filename}.raw")
             data.tofile(filepath)

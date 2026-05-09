@@ -13,11 +13,11 @@
 
 namespace processing
 {
-/** @brief Compute the L1 gradient magnitude of an image.
- * @param image The input image metadata.
- * @param Gx The x-component of the gradient.
- * @param Gy The y-component of the gradient.
- * @return Status indicating success or failure.
+/** @brief  Compute the L1 gradient magnitude of an image.
+ *  @param  image The input image metadata.
+ *  @param  Gx The x-component of the gradient.
+ *  @param  Gy The y-component of the gradient.
+ *  @return Status indicating success or failure.
  */
 template <typename PixelT = uint8_t, typename GradientT = int16_t, typename MagT = uint16_t>
 [[nodiscard]] Status l1(const image::io::metadata_t<PixelT>& image,
@@ -60,11 +60,11 @@ template <typename PixelT = uint8_t, typename GradientT = int16_t, typename MagT
     return Status::E_OK;
 }
 
-/** @brief Compute the L2 gradient magnitude of an image.
- * @param image The input image metadata.
- * @param Gx The x-component of the gradient.
- * @param Gy The y-component of the gradient.
- * @return Status indicating success or failure.
+/** @brief  Compute the L2 gradient magnitude of an image.
+ *  @param  image The input image metadata.
+ *  @param  Gx The x-component of the gradient.
+ *  @param  Gy The y-component of the gradient.
+ *  @return Status indicating success or failure.
  */
 template <typename PixelT = uint8_t, typename GradientT = int16_t, typename MagT = float>
 [[nodiscard]] Status l2(const image::io::metadata_t<PixelT>& image,
@@ -110,11 +110,11 @@ template <typename PixelT = uint8_t, typename GradientT = int16_t, typename MagT
     return Status::E_OK;
 }
 
-/** @brief Compute the direction of the gradient of an image.
- * @param image The input image metadata.
- * @param Gx The x-component of the gradient.
- * @param Gy The y-component of the gradient.
- * @return Status indicating success or failure.
+/** @brief  Compute the direction of the gradient of an image.
+ *  @param  image The input image metadata.
+ *  @param  Gx The x-component of the gradient.
+ *  @param  Gy The y-component of the gradient.
+ *  @return Status indicating success or failure.
  */
 template <typename PixelT = uint8_t, typename GradientT = int32_t>
 [[nodiscard]] Status direction(const image::io::metadata_t<PixelT>& image,
