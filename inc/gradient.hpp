@@ -13,11 +13,11 @@
 
 namespace processing
 {
-/** @brief Compute the L1 gradient magnitude of an image.
- * @param image The input image metadata.
- * @param Gx The x-component of the gradient.
- * @param Gy The y-component of the gradient.
- * @return Status indicating success or failure.
+/** @brief  Compute the L1 gradient magnitude of an image.
+ *  @param  image The input image metadata.
+ *  @param  Gx The x-component of the gradient.
+ *  @param  Gy The y-component of the gradient.
+ *  @return Status indicating success or failure.
  */
 template <typename PixelT = uint8_t, typename GradientT = int16_t, typename MagT = uint16_t>
 [[nodiscard]] Status l1(const image::io::metadata_t<PixelT>& image,
@@ -60,11 +60,11 @@ template <typename PixelT = uint8_t, typename GradientT = int16_t, typename MagT
     return Status::E_OK;
 }
 
-/** @brief Compute the L2 gradient magnitude of an image.
- * @param image The input image metadata.
- * @param Gx The x-component of the gradient.
- * @param Gy The y-component of the gradient.
- * @return Status indicating success or failure.
+/** @brief  Compute the L2 gradient magnitude of an image.
+ *  @param  image The input image metadata.
+ *  @param  Gx The x-component of the gradient.
+ *  @param  Gy The y-component of the gradient.
+ *  @return Status indicating success or failure.
  */
 template <typename PixelT = uint8_t, typename GradientT = int16_t, typename MagT = float>
 [[nodiscard]] Status l2(const image::io::metadata_t<PixelT>& image,
@@ -110,11 +110,11 @@ template <typename PixelT = uint8_t, typename GradientT = int16_t, typename MagT
     return Status::E_OK;
 }
 
-/** @brief Compute the direction of the gradient of an image.
- * @param image The input image metadata.
- * @param Gx The x-component of the gradient.
- * @param Gy The y-component of the gradient.
- * @return Status indicating success or failure.
+/** @brief  Compute the direction of the gradient of an image.
+ *  @param  image The input image metadata.
+ *  @param  Gx The x-component of the gradient.
+ *  @param  Gy The y-component of the gradient.
+ *  @return Status indicating success or failure.
  */
 template <typename PixelT = uint8_t, typename GradientT = int32_t>
 [[nodiscard]] Status direction(const image::io::metadata_t<PixelT>& image,
@@ -127,36 +127,35 @@ template <typename PixelT = uint8_t, typename GradientT = int32_t>
         return (image.buffer && Gx && Gy) ? Status::E_NOK : Status::E_INVAL_PTR;
     }
 
-    GradientT x;
-    GradientT y;
-    uint16_t abs_x;
-    uint16_t abs_y;
     uint8_t angle;
     for(uint32_t i = 0; i < image.pixel_count; ++i)
     {
-        x = std::abs(Gx[i]);
-        y = std::abs(Gy[i]);
-        abs_x = static_cast<uint16_t>(x);
-        abs_y = static_cast<uint16_t>(y);
+        const GradientT cur_x = Gx[i];
+        const GradientT cur_y = Gy[i];
+        const uint16_t abs_x = static_cast<uint16_t>(std::abs(cur_x));
+        const uint16_t abs_y = static_cast<uint16_t>(std::abs(cur_y));
 
-        if((abs_y * 5) > (abs_x * 12))
+        if ((abs_y * 5) > (abs_x * 12)) // > 2.4 (Vertical gradient)
         {
             angle = 90;
         }
-        else if((abs_y * 5) > (abs_x * 2))
+        else if ((abs_y * 2) > abs_x) // > 0.5 (Diagonal range)
         {
-            angle = 0;
-        }
-        else
-        {
-            if(((x > 0) && (y > 0)) || ((x < 0) && (y < 0)))
-            {
-                angle = 45;
-            }
-            else
+            // In image coordinates, y increases downwards.
+            // cur_x > 0, cur_y > 0 is Down-Right (135 deg)
+            // cur_x > 0, cur_y < 0 is Up-Right (45 deg)
+            if (((cur_x > 0) && (cur_y > 0)) || ((cur_x < 0) && (cur_y < 0)))
             {
                 angle = 135;
             }
+            else
+            {
+                angle = 45;
+            }
+        }
+        else // < 0.5 (Horizontal range)
+        {
+            angle = 0;
         }
         image.buffer[i] = angle;
     }
