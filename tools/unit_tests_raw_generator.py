@@ -90,12 +90,10 @@ if __name__ == "__main__":
 
     gen = UnitTestsRawGenerator(size=max(image_height,image_width))
 
-    # Determine paths
     assets_path = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../assets'))
     if not os.path.exists(assets_path):
         os.makedirs(assets_path)
 
-    # Generate image dictionary
     images = {
         "rect": gen.rectangle()[:image_height, :image_width],
         "circ": gen.circle()[:image_height, :image_width], 
@@ -106,7 +104,6 @@ if __name__ == "__main__":
         "grey": gen.grey_canvas(intensity=128)[:image_height, :image_width]
     }
 
-    # Save images as raw binary files
     for filename, data in images.items():
         filepath = os.path.join(assets_path, f"{filename}.raw")
         data.tofile(filepath)

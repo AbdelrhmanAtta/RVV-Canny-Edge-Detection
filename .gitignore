@@ -45,6 +45,3 @@ html/
 latex/
 .venv/
 *.json
-
-# Pictures
-assets/
