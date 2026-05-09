@@ -25,7 +25,7 @@ int main()
     blurred_img.aligned_buffer_size = aligned_size;
     blurred_img.buffer.reset(static_cast<uint8_t*>(utils::memory::aligned_alloc(64, aligned_size)));
 
-    stat = image::io::load_raw<uint8_t>("rect_spatial.raw", blurred_img);
+    stat = image::io::load_raw<uint8_t>("tiger_spatial.raw", blurred_img);
     if(Status::E_OK != stat) return -1;
 
     image::io::metadata_t<uint8_t> out_l1;
@@ -67,11 +67,11 @@ int main()
 
     std::cout << "L1 Magnitude Time:  " << d_l1.count() << " ms" << std::endl;
     std::cout << "L2 Magnitude Time:  " << d_l2.count() << " ms" << std::endl;
-    std::cout << "Direction Time:     " << d_dir.count() << " ms" << std::endl;
+    std::cout << "Ditigerion Time:     " << d_dir.count() << " ms" << std::endl;
 
-    if (image::io::save_raw<uint8_t>("rect_l1.raw", out_l1) != Status::E_OK) return -1;
-    if (image::io::save_raw<uint8_t>("rect_l2.raw", out_l2) != Status::E_OK) return -1;
-    if (image::io::save_raw<uint8_t>("rect_dir.raw", out_dir) != Status::E_OK) return -1;
+    if (image::io::save_raw<uint8_t>("tiger_l1.raw", out_l1) != Status::E_OK) return -1;
+    if (image::io::save_raw<uint8_t>("tiger_l2.raw", out_l2) != Status::E_OK) return -1;
+    if (image::io::save_raw<uint8_t>("tiger_dir.raw", out_dir) != Status::E_OK) return -1;
 
     return 0;
 }

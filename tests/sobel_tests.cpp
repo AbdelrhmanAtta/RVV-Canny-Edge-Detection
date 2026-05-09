@@ -21,7 +21,7 @@ int main()
     raw_image.aligned_buffer_size = utils::memory::align_64(w * h);
     raw_image.buffer.reset(static_cast<uint8_t*>(utils::memory::aligned_alloc(64, raw_image.aligned_buffer_size)));
 
-    stat = image::io::load_raw<uint8_t>("rect.raw", raw_image);
+    stat = image::io::load_raw<uint8_t>("tiger.raw", raw_image);
     if(Status::E_OK != stat) return -1;
 
     image::io::metadata_t<uint8_t> out_gx_img;
