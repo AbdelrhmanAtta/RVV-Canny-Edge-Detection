@@ -55,30 +55,6 @@ class UnitTestsRawGenerator:
                     img[y, x] = 255
         return img
 
-<<<<<<< HEAD
-    ## @brief Generates a solid black image (all zeros).
-    #  @return A NumPy array representing a full black canvas.
-    def full_black(self):
-        return np.zeros((self.size, self.size), dtype=np.uint8)
-
-    ## @brief Generates a solid white image (all 255s).
-    #  @return A NumPy array representing a full white canvas.
-    def full_white(self):
-        return np.full((self.size, self.size), 255, dtype=np.uint8)
-
-    ## @brief Generates an image where the left half is black and the right half is white.
-    #  @return A NumPy array with the left half black (0) and right half white (255).
-    #  @note Useful for testing vertical edge detection.
-    def half_black_half_white(self):
-        img = np.zeros((self.size, self.size), dtype=np.uint8)
-        img[:, self.size // 2:] = 255
-        return img
-
-    ## @brief Generates a solid grey image.
-    #  @param intensity The grey level (0-255). 128 is standard middle grey.
-    def grey_canvas(self, intensity=128):
-        return np.full((self.size, self.size), intensity, dtype=np.uint8)
-=======
     ## @brief Generates a horizontal white line on a black background.
     #  @param y The vertical position of the line.
     #  @param x_range A tuple (start, end) for the horizontal range.
@@ -203,7 +179,6 @@ class TestUnitTestsRawGenerator(unittest.TestCase):
         self.assertEqual(img[mid + mid // 2, mid // 2], 255)
         self.assertEqual(img[mid + mid // 2, mid + mid // 2], 0)
 
->>>>>>> feat/nonmaximum-suppression
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--test":
@@ -219,25 +194,6 @@ if __name__ == "__main__":
 
         gen = UnitTestsRawGenerator(size=max(image_height, image_width))
 
-<<<<<<< HEAD
-    assets_path = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../assets'))
-    if not os.path.exists(assets_path):
-        os.makedirs(assets_path)
-
-    images = {
-        "rect": gen.rectangle()[:image_height, :image_width],
-        "circ": gen.circle()[:image_height, :image_width], 
-        "diag": gen.diagonal_edge()[:image_height, :image_width],
-        "black": gen.full_black()[:image_height, :image_width],
-        "white": gen.full_white()[:image_height, :image_width],
-        "half_bw": gen.half_black_half_white()[:image_height, :image_width],
-        "grey": gen.grey_canvas(intensity=128)[:image_height, :image_width]
-    }
-
-    for filename, data in images.items():
-        filepath = os.path.join(assets_path, f"{filename}.raw")
-        data.tofile(filepath)
-=======
         assets_path = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../assets'))
         if not os.path.exists(assets_path):
             os.makedirs(assets_path)
@@ -259,4 +215,3 @@ if __name__ == "__main__":
             filepath = os.path.join(assets_path, f"{filename}.raw")
             data.tofile(filepath)
             print(f"Generated {filepath}")
->>>>>>> feat/nonmaximum-suppression

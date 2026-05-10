@@ -13,7 +13,7 @@
 #include <vector>
 #include <cmath>
 
-namespace processing::gaussian
+namespace processing
 {
 /**
  * @brief   5x5 Gaussian blur kernel and its 1D separable counterpart.
@@ -159,4 +159,4 @@ template <typename PixelT = uint8_t, typename AccumulatorT = int32_t>
     return Status::E_OK;
 }
 
-} // namespace processing::gaussian
+} // namespace processing

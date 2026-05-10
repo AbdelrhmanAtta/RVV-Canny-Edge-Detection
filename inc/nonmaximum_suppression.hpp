@@ -1,6 +1,6 @@
 /**
- * @file nonmaximum_suppression.hpp
- * @brief Non-maximum suppression implementation for thinning edges.
+ * @file    nonmaximum_suppression.hpp
+ * @brief   Non-maximum suppression implementation for thinning edges.
  */
 #pragma once
 #include "std_types.hpp"
@@ -10,11 +10,11 @@
 
 namespace processing
 {
-/** @brief Performs non-maximum suppression to thin edges.
+/** @brief  Performs non-maximum suppression to thin edges.
  *
- *  @param magnitude The input gradient magnitude image.
- *  @param direction The input gradient direction image (angles 0, 45, 90, 135).
- *  @param out The output thinned image.
+ *  @param  magnitude The input gradient magnitude image.
+ *  @param  direction The input gradient direction image (angles 0, 45, 90, 135).
+ *  @param  out The output thinned image.
  *  @return Status indicating success or failure.
  */
 template <typename PixelT = uint8_t>

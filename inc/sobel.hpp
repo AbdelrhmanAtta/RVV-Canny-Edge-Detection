@@ -10,7 +10,7 @@
 #include <vector>
 #include <cmath>
 
-namespace processing::sobel
+namespace processing
 {
 /** @brief Perform 3x3 Sobel edge detection on the input image.
  * @param image The input image metadata.
@@ -59,4 +59,4 @@ template <typename PixelT = uint8_t, typename OutputT = int16_t>
     return Status::E_OK;
 }
 
-} // namespace processing::sobel
+} // namespace processing
