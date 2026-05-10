@@ -45,3 +45,5 @@ html/
 latex/
 .venv/
 *.json
+assets/*_output.raw
+assets/rect_*.raw
