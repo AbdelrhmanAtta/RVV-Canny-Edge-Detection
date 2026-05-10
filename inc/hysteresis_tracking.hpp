@@ -1,5 +1,5 @@
 /**
- * @file    hysteresis_edge_tracking.hpp
+ * @file    hysteresis_tracking.hpp
  * @brief   Hysteresis Double Thresholding and Edge Tracking for Canny Edge Detection.
  */
 
