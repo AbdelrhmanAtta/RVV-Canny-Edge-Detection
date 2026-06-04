@@ -43,7 +43,7 @@ int main()
     std::vector<int16_t> gx(pixel_count);
     std::vector<int16_t> gy(pixel_count);
 
-    stat = processing::sobel::spatial_3x3(blurred_img, gx.data(), gy.data());
+    stat = processing::spatial_3x3(blurred_img, gx.data(), gy.data());
     if(Status::E_OK != stat) return -1;
 
     auto t1 = std::chrono::high_resolution_clock::now();

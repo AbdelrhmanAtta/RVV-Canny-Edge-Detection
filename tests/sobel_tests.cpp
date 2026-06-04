@@ -43,7 +43,7 @@ int main()
 
     auto start_time = std::chrono::high_resolution_clock::now();
 
-    stat = processing::sobel::spatial_3x3(raw_image, gx_raw.data(), gy_raw.data());
+    stat = processing::spatial_3x3(raw_image, gx_raw.data(), gy_raw.data());
     if(Status::E_OK != stat) return -1;
 
     for(uint32_t i = 0; i < raw_image.pixel_count; ++i) 

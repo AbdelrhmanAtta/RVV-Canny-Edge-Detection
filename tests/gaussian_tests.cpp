@@ -34,7 +34,7 @@ int main()
     if (Status::E_OK != stat) return static_cast<int>(stat);
 
     auto start = std::chrono::high_resolution_clock::now();
-    stat = processing::gaussian::spatial_5x5(img_spatial);
+    stat = processing::spatial_5x5(img_spatial);
     auto end = std::chrono::high_resolution_clock::now();
     
     if (Status::E_OK == stat) {
@@ -48,7 +48,7 @@ int main()
     }
 
     start = std::chrono::high_resolution_clock::now();
-    stat = processing::gaussian::separable_5x5(img_separable);
+    stat = processing::separable_5x5(img_separable);
     end = std::chrono::high_resolution_clock::now();
 
     if (Status::E_OK == stat) {

@@ -19,8 +19,8 @@ namespace processing
  */
 template <typename PixelT = uint8_t>
 [[nodiscard]] Status nms(const image::io::metadata_t<PixelT>& magnitude,
-                         const image::io::metadata_t<PixelT>& direction,
-                         image::io::metadata_t<PixelT>& out)
+                        const image::io::metadata_t<PixelT>& direction,
+                        image::io::metadata_t<PixelT>& out)
 {
     if(!magnitude.height || !magnitude.width || !magnitude.aligned_buffer_size || !magnitude.buffer
        || !direction.buffer || !out.buffer)
@@ -84,4 +84,5 @@ template <typename PixelT = uint8_t>
     }
     return Status::E_OK;
 }
+
 } // namespace processing
