@@ -1,162 +1,283 @@
+#include <gtest/gtest.h>
 #include <iostream>
 #include <cstdint>
-#include <string_view>
+#include <string>
 #include <vector>
+#include <cstring>
+#include <cmath>
+#include <utility>
+
 #include "../inc/utils.hpp"
 #include "../inc/std_types.hpp"
 #include "../inc/io.hpp"
 #include "../inc/gaussian.hpp"
+#include "../inc/sobel.hpp"
+#include "../inc/gradient.hpp"
 
-// Macro to automatically construct the paths and parameters.
-// #w and #h convert the integer dimensions directly into strings.
-#define TEST_IMG(name, w, h) \
-    { name #w "x" #h ".raw", \
-      name #w "x" #h "_copy.raw", \
-      w, h }
+template <typename T>
+image::io::metadata_t<T> allocate_image(uint32_t w, uint32_t h) {
+    image::io::metadata_t<T> img;
+    img.width = w;
+    img.height = h;
+    img.pixel_count = static_cast<size_t>(w) * h;
+    img.aligned_buffer_size = utils::memory::align_64(img.pixel_count * sizeof(T));
+    img.buffer.reset(static_cast<T*>(
+        utils::memory::aligned_alloc(64, img.aligned_buffer_size)));
+    return img;
+}
 
-struct raw_image_t
-{
-    std::string_view input_file;
-    std::string_view output_file;
-    uint32_t image_width;
-    uint32_t image_height;
-};
+TEST(CannyPipeline, ProcessAndSaveAllImages) {
+    std::vector<std::string> bases = {
+        "circ", "diag", "diag_inv", "full_black", "full_white", 
+        "half_bw", "horiz", "quad_bw", "rect", "vert"
+    };
+    std::vector<std::pair<uint32_t, uint32_t>> dims = {
+        {312, 444}, {512, 512}, {600, 400}
+    };
 
-#ifdef HOST_MODE
-    #include <gtest/gtest.h>
-#else
+    for(const auto& base : bases) {
+        for(const auto& [w, h] : dims) {
+            std::string prefix = base + std::to_string(w) + "x" + std::to_string(h);
+            std::string src = prefix + ".raw";
 
-#endif
-
-#ifdef HOST_MODE
-    TEST(CannyInfrastructure, IO_AllImages) 
-    {
-        std::vector<raw_image_t> images = 
-        {
-            // --- 312x444 Images ---
-            TEST_IMG("circ", 312, 444),
-            TEST_IMG("diag", 312, 444),
-            TEST_IMG("diag_inv", 312, 444),
-            TEST_IMG("full_black", 312, 444),
-            TEST_IMG("full_white", 312, 444),
-            TEST_IMG("half_bw", 312, 444),
-            TEST_IMG("horiz", 312, 444),
-            TEST_IMG("quad_bw", 312, 444),
-            TEST_IMG("rect", 312, 444),
-            TEST_IMG("vert", 312, 444),
-
-            // --- 512x512 Images ---
-            TEST_IMG("circ", 512, 512),
-            TEST_IMG("diag", 512, 512),
-            TEST_IMG("diag_inv", 512, 512),
-            TEST_IMG("full_black", 512, 512),
-            TEST_IMG("full_white", 512, 512),
-            TEST_IMG("half_bw", 512, 512),
-            TEST_IMG("horiz", 512, 512),
-            TEST_IMG("quad_bw", 512, 512),
-            TEST_IMG("rect", 512, 512),
-            TEST_IMG("vert", 512, 512),
-
-            // --- 600x400 Images ---
-            TEST_IMG("circ", 600, 400),
-            TEST_IMG("diag", 600, 400),
-            TEST_IMG("diag_inv", 600, 400),
-            TEST_IMG("full_black", 600, 400),
-            TEST_IMG("full_white", 600, 400),
-            TEST_IMG("half_bw", 600, 400),
-            TEST_IMG("horiz", 600, 400),
-            TEST_IMG("quad_bw", 600, 400),
-            TEST_IMG("rect", 600, 400),
-            TEST_IMG("vert", 600, 400)
-        };
-
-        for(const auto& [src, dest, w, h] : images)
-        {
-            const size_t pixel_count = static_cast<size_t>(w) * h;
-            const size_t aligned_size = utils::memory::align_64(pixel_count);
-
-            image::io::metadata_t<uint8_t> raw_image;
-            raw_image.width              = w;
-            raw_image.height             = h;
-            raw_image.pixel_count        = pixel_count;
-            raw_image.aligned_buffer_size = aligned_size;
-            raw_image.buffer.reset(static_cast<uint8_t*>(
-                utils::memory::aligned_alloc(64, aligned_size)));
-
-            Status load_status = image::io::load_raw<uint8_t>(src, raw_image);
-            
-            // Appending a message to EXPECT_EQ tells you exactly WHICH file failed if one breaks
-            EXPECT_EQ(load_status, Status::E_OK) << "Failed loading: " << src;
-
-            if (load_status == Status::E_OK)
-            {
-                Status save_status = image::io::save_raw<uint8_t>(dest, raw_image);
-                EXPECT_EQ(save_status, Status::E_OK) << "Failed saving: " << dest;
+            auto img_orig = allocate_image<uint8_t>(w, h);
+            if(image::io::load_raw<uint8_t>(src, img_orig) != Status::E_OK) {
+                continue;
             }
+
+            auto img_spatial = allocate_image<uint8_t>(w, h);
+            std::memcpy(img_spatial.buffer.get(), img_orig.buffer.get(), img_orig.pixel_count);
+            EXPECT_EQ(processing::spatial_5x5(img_spatial), Status::E_OK);
+            EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_spatial.raw", img_spatial), Status::E_OK);
+
+            auto img_separable = allocate_image<uint8_t>(w, h);
+            std::memcpy(img_separable.buffer.get(), img_orig.buffer.get(), img_orig.pixel_count);
+            EXPECT_EQ(processing::separable_5x5(img_separable), Status::E_OK);
+            EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_separable.raw", img_separable), Status::E_OK);
+
+            auto gx = allocate_image<int16_t>(w, h);
+            auto gy = allocate_image<int16_t>(w, h);
+            EXPECT_EQ(processing::spatial_3x3(img_separable, gx.buffer.get(), gy.buffer.get()), Status::E_OK);
+            EXPECT_EQ(image::io::save_raw<int16_t>(prefix + "_gx.raw", gx), Status::E_OK);
+            EXPECT_EQ(image::io::save_raw<int16_t>(prefix + "_gy.raw", gy), Status::E_OK);
+
+            auto mag_l1 = allocate_image<uint8_t>(w, h);
+            EXPECT_EQ(processing::l1(mag_l1, gx.buffer.get(), gy.buffer.get()), Status::E_OK);
+            EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_mag_l1.raw", mag_l1), Status::E_OK);
+
+            auto mag_l2 = allocate_image<uint8_t>(w, h);
+            EXPECT_EQ(processing::l2(mag_l2, gx.buffer.get(), gy.buffer.get()), Status::E_OK);
+            EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_mag_l2.raw", mag_l2), Status::E_OK);
+
+            auto dir = allocate_image<uint8_t>(w, h);
+            EXPECT_EQ(processing::direction(dir, gx.buffer.get(), gy.buffer.get()), Status::E_OK);
+            EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_dir.raw", dir), Status::E_OK);
+        }
+    }
+}
+
+TEST(CannyGaussian, UniformImage) {
+    const uint32_t dim = 128;
+    auto img = allocate_image<uint8_t>(dim, dim);
+    std::memset(img.buffer.get(), 128, img.pixel_count);
+
+    Status stat = processing::separable_5x5(img);
+    EXPECT_EQ(stat, Status::E_OK);
+
+    const uint8_t expected_val = 135;
+
+    for (uint32_t y = 2; y < dim - 2; ++y) {
+        for (uint32_t x = 2; x < dim - 2; ++x) {
+            uint8_t val = img.buffer.get()[y * dim + x];
+            EXPECT_NEAR(val, expected_val, 1);
+        }
+    }
+}
+
+TEST(CannyGaussian, AllBlackImage) {
+    const uint32_t dim = 128;
+    auto img = allocate_image<uint8_t>(dim, dim);
+    std::memset(img.buffer.get(), 0, img.pixel_count);
+
+    Status stat = processing::separable_5x5(img);
+    EXPECT_EQ(stat, Status::E_OK);
+
+    for (size_t i = 0; i < img.pixel_count; ++i) {
+        EXPECT_EQ(img.buffer.get()[i], 0);
+    }
+}
+
+TEST(CannyGaussian, ImpulseSymmetry) {
+    const uint32_t dim = 128;
+    auto img = allocate_image<uint8_t>(dim, dim);
+    std::memset(img.buffer.get(), 0, img.pixel_count);
+
+    const uint32_t cx = dim / 2;
+    const uint32_t cy = dim / 2;
+    img.buffer.get()[cy * dim + cx] = 255;
+
+    Status stat = processing::separable_5x5(img);
+    EXPECT_EQ(stat, Status::E_OK);
+
+    uint8_t* ptr = img.buffer.get();
+    
+    EXPECT_EQ(ptr[cy * dim + (cx - 1)], ptr[cy * dim + (cx + 1)]);
+    EXPECT_EQ(ptr[cy * dim + (cx - 2)], ptr[cy * dim + (cx + 2)]);
+    
+    EXPECT_EQ(ptr[(cy - 1) * dim + cx], ptr[(cy + 1) * dim + cx]);
+    EXPECT_EQ(ptr[(cy - 2) * dim + cx], ptr[(cy + 2) * dim + cx]);
+}
+
+TEST(CannySobel, UniformImage) {
+    const uint32_t dim = 128;
+    auto img = allocate_image<uint8_t>(dim, dim);
+    auto gx  = allocate_image<int16_t>(dim, dim);
+    auto gy  = allocate_image<int16_t>(dim, dim);
+    
+    std::memset(img.buffer.get(), 128, img.pixel_count);
+
+    Status stat = processing::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
+    EXPECT_EQ(stat, Status::E_OK);
+
+    for (uint32_t y = 1; y < dim - 1; ++y) {
+        for (uint32_t x = 1; x < dim - 1; ++x) {
+            size_t idx = y * dim + x;
+            EXPECT_EQ(gx.buffer.get()[idx], 0);
+            EXPECT_EQ(gy.buffer.get()[idx], 0);
+        }
+    }
+}
+
+TEST(CannySobel, VerticalEdge) {
+    const uint32_t dim = 128;
+    auto img = allocate_image<uint8_t>(dim, dim);
+    auto gx  = allocate_image<int16_t>(dim, dim);
+    auto gy  = allocate_image<int16_t>(dim, dim);
+
+    for (uint32_t y = 0; y < dim; ++y) {
+        for (uint32_t x = 0; x < dim; ++x) {
+            img.buffer.get()[y * dim + x] = (x < dim / 2) ? 0 : 255;
         }
     }
 
-    TEST(CannyPerformance, GaussianBlurSpatialVsSeparable) 
-    {
-        const uint32_t width = 512;
-        const uint32_t height = 512;
-        const size_t pixel_count = width * height;
-        const size_t aligned_size = utils::memory::align_64(pixel_count);
+    Status stat = processing::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
+    EXPECT_EQ(stat, Status::E_OK);
 
-        image::io::metadata_t<uint8_t> img_spatial;
-        img_spatial.width = width;
-        img_spatial.height = height;
-        img_spatial.pixel_count = pixel_count;
-        img_spatial.aligned_buffer_size = aligned_size;
+    const uint32_t edge_x = dim / 2;
+    for (uint32_t y = 1; y < dim - 1; ++y) {
+        size_t idx = y * dim + edge_x;
+        EXPECT_GT(std::abs(gx.buffer.get()[idx]), 0);
+        EXPECT_EQ(gy.buffer.get()[idx], 0);
+    }
+}
 
-        image::io::metadata_t<uint8_t> img_separable;
-        img_separable.width = width;
-        img_separable.height = height;
-        img_separable.pixel_count = pixel_count;
-        img_separable.aligned_buffer_size = aligned_size;
+TEST(CannySobel, HorizontalEdge) {
+    const uint32_t dim = 128;
+    auto img = allocate_image<uint8_t>(dim, dim);
+    auto gx  = allocate_image<int16_t>(dim, dim);
+    auto gy  = allocate_image<int16_t>(dim, dim);
 
-        // Load the tiger image for both tests
-        Status stat_spatial = image::io::load_raw<uint8_t>("tiger.raw", img_spatial);
-        ASSERT_EQ(stat_spatial, Status::E_OK) << "Failed to load tiger.raw for spatial blur";
-
-        Status stat_separable = image::io::load_raw<uint8_t>("tiger.raw", img_separable);
-        ASSERT_EQ(stat_separable, Status::E_OK) << "Failed to load tiger.raw for separable blur";
-
-        // --- Profile Spatial 5x5 ---
-        auto start_spatial = std::chrono::high_resolution_clock::now();
-        Status proc_spatial = processing::spatial_5x5(img_spatial);
-        auto end_spatial = std::chrono::high_resolution_clock::now();
-        
-        EXPECT_EQ(proc_spatial, Status::E_OK) << "Spatial processing failed";
-        if (proc_spatial == Status::E_OK) {
-            auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end_spatial - start_spatial);
-            std::cout << "[ PERFORMANCE ] Spatial Gaussian Blur Time: " << dur.count() << " ms\n";
-            
-            Status save_stat = image::io::save_raw<uint8_t>("tiger_spatial.raw", img_spatial);
-            EXPECT_EQ(save_stat, Status::E_OK) << "Failed to save tiger_spatial.raw";
-        }
-
-        // --- Profile Separable 5x5 ---
-        auto start_separable = std::chrono::high_resolution_clock::now();
-        Status proc_separable = processing::separable_5x5(img_separable);
-        auto end_separable = std::chrono::high_resolution_clock::now();
-
-        EXPECT_EQ(proc_separable, Status::E_OK) << "Separable processing failed";
-        if (proc_separable == Status::E_OK) {
-            auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end_separable - start_separable);
-            std::cout << "[ PERFORMANCE ] Separable Gaussian Blur Time: " << dur.count() << " ms\n";
-            
-            Status save_stat = image::io::save_raw<uint8_t>("tiger_separable.raw", img_separable);
-            EXPECT_EQ(save_stat, Status::E_OK) << "Failed to save tiger_separable.raw";
+    for (uint32_t y = 0; y < dim; ++y) {
+        for (uint32_t x = 0; x < dim; ++x) {
+            img.buffer.get()[y * dim + x] = (y < dim / 2) ? 0 : 255;
         }
     }
 
-    int main(int argc, char** argv) {
-        #if GTEST_HAS_EXCEPTIONS
-        #endif
-        testing::InitGoogleTest(&argc, argv);
-        return RUN_ALL_TESTS();
-    }
-#else
+    Status stat = processing::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
+    EXPECT_EQ(stat, Status::E_OK);
 
-#endif
+    const uint32_t edge_y = dim / 2;
+    for (uint32_t x = 1; x < dim - 1; ++x) {
+        size_t idx = edge_y * dim + x;
+        EXPECT_EQ(gx.buffer.get()[idx], 0);
+        EXPECT_GT(std::abs(gy.buffer.get()[idx]), 0);
+    }
+}
+
+TEST(CannySobel, DiagonalEdge) {
+    const uint32_t dim = 128;
+    auto img = allocate_image<uint8_t>(dim, dim);
+    auto gx  = allocate_image<int16_t>(dim, dim);
+    auto gy  = allocate_image<int16_t>(dim, dim);
+
+    for (uint32_t y = 0; y < dim; ++y) {
+        for (uint32_t x = 0; x < dim; ++x) {
+            img.buffer.get()[y * dim + x] = (x > y) ? 255 : 0;
+        }
+    }
+
+    Status stat = processing::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
+    EXPECT_EQ(stat, Status::E_OK);
+
+    for (uint32_t i = 1; i < dim - 1; ++i) {
+        size_t idx = i * dim + i;
+        EXPECT_GT(std::abs(gx.buffer.get()[idx]), 0);
+        EXPECT_GT(std::abs(gy.buffer.get()[idx]), 0);
+    }
+}
+
+TEST(CannyDirection, EdgeAngles) {
+    const uint32_t dim = 128;
+    auto gx  = allocate_image<int16_t>(dim, dim);
+    auto gy  = allocate_image<int16_t>(dim, dim);
+    auto dir = allocate_image<uint8_t>(dim, dim);
+
+    gx.buffer.get()[0] = 255; 
+    gy.buffer.get()[0] = 0;
+
+    gx.buffer.get()[1] = 0; 
+    gy.buffer.get()[1] = 255;
+
+    gx.buffer.get()[2] = 255; 
+    gy.buffer.get()[2] = 255;
+
+    Status stat = processing::direction(dir, gx.buffer.get(), gy.buffer.get());
+    EXPECT_EQ(stat, Status::E_OK);
+
+    EXPECT_EQ(dir.buffer.get()[0], 0);
+    EXPECT_EQ(dir.buffer.get()[1], 90);
+    EXPECT_EQ(dir.buffer.get()[2], 135);
+}
+
+TEST(CannyMagnitude, NonZeroOutput) {
+    const uint32_t dim = 128;
+    auto gx  = allocate_image<int16_t>(dim, dim);
+    auto gy  = allocate_image<int16_t>(dim, dim);
+    auto mag = allocate_image<uint8_t>(dim, dim);
+
+    for (size_t i = 0; i < gx.pixel_count; ++i) {
+        gx.buffer.get()[i] = (i % 512) - 256; 
+        gy.buffer.get()[i] = ((i * 3) % 512) - 256;
+    }
+
+    Status stat_l1 = processing::l1(mag, gx.buffer.get(), gy.buffer.get());
+    EXPECT_EQ(stat_l1, Status::E_OK);
+    
+    bool has_nonzero_l1 = false;
+    for (size_t i = 0; i < mag.pixel_count; ++i) {
+        if (mag.buffer.get()[i] > 0) {
+            has_nonzero_l1 = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(has_nonzero_l1);
+
+    std::memset(mag.buffer.get(), 0, mag.pixel_count);
+
+    Status stat_l2 = processing::l2(mag, gx.buffer.get(), gy.buffer.get());
+    EXPECT_EQ(stat_l2, Status::E_OK);
+    
+    bool has_nonzero_l2 = false;
+    for (size_t i = 0; i < mag.pixel_count; ++i) {
+        if (mag.buffer.get()[i] > 0) {
+            has_nonzero_l2 = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(has_nonzero_l2);
+}
+
+int main(int argc, char** argv) {
+    testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
