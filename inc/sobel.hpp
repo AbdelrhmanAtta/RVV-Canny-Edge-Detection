@@ -28,7 +28,7 @@ template <typename PixelT = uint8_t, typename OutputT = int16_t>
         return image.buffer ? Status::E_NOK : Status::E_INVAL_PTR;
     }
     
-    for(uint32_t y = 0; y <= image.height; ++y)
+    for(uint32_t y = 0; y < image.height; ++y)
     {
         const uint32_t y_top = (0 == y) ? 0 : y - 1;
         const uint32_t y_bot = (image.height - 1 == y) ? y : y + 1;
@@ -37,7 +37,7 @@ template <typename PixelT = uint8_t, typename OutputT = int16_t>
         const PixelT* row_mid = &image.buffer[y * image.width];
         const PixelT* row_bot = &image.buffer[y_bot * image.width];
         
-        for(uint32_t x = 0; x <= image.width; ++x)
+        for(uint32_t x = 0; x < image.width; ++x)
         {
             const uint32_t x_l = (0 == x) ? 0 : x - 1;
             const uint32_t x_r = (image.width - 1 == x) ? x : x + 1;
