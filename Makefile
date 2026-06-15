@@ -4,8 +4,8 @@ GTEST    	:= $(HOME)/googletest-installed
 SRCS        := $(wildcard src/*.cpp)
 LIB_SRCS    := $(filter-out src/main.cpp, $(SRCS))
 
-RV_FLAGS = -std=c++23 -march=rv64gcv -O3 -static -Iinc -ffunction-sections -fdata-sections -Wl,--gc-sections -Wl,-s
-RV_FLAGS_BASE = -std=c++23 -march=rv64gcv -static -Iinc -ffunction-sections -fdata-sections -Wl,--gc-sections -Wl,-s
+RV_FLAGS = -std=c++23 -march=rv64gcv -O3 -static -Iinc
+RV_FLAGS_BASE = -std=c++23 -march=rv64gcv -static -Iinc
 HOST_FLAGS = -std=c++23 -O3 -I$(GTEST)/include -L$(GTEST)/lib -lgtest -lgtest_main -lpthread
 
 # Targets
