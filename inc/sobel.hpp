@@ -27,32 +27,42 @@ template <typename PixelT = uint8_t, typename OutputT = int16_t>
     {
         return image.buffer ? Status::E_NOK : Status::E_INVAL_PTR;
     }
+
+    const uint32_t width = image.width;
+    const uint32_t height = image.height;
     
-    for(uint32_t y = 0; y < image.height; ++y)
+    const uint32_t pw = width + 2;
+    const uint32_t ph = height + 2;
+
+    auto padded_input = std::make_unique<PixelT[]>(pw * ph);
+    std::fill(padded_input.get(), padded_input.get() + (pw * ph), 0);
+
+    for (uint32_t y = 0; y < height; ++y) {
+        std::copy_n(&image.buffer[y * width], width, &padded_input[(y + 1) * pw + 1]);
+    }
+
+    for(uint32_t y = 0; y < height; ++y)
     {
-        const uint32_t y_top = (0 == y) ? 0 : y - 1;
-        const uint32_t y_bot = (image.height - 1 == y) ? y : y + 1;
-
-        const PixelT* row_top = &image.buffer[y_top * image.width];
-        const PixelT* row_mid = &image.buffer[y * image.width];
-        const PixelT* row_bot = &image.buffer[y_bot * image.width];
+        const PixelT* row_top = &padded_input[y * pw];
+        const PixelT* row_mid = &padded_input[(y + 1) * pw];
+        const PixelT* row_bot = &padded_input[(y + 2) * pw];
         
-        for(uint32_t x = 0; x < image.width; ++x)
+        for(uint32_t x = 0; x < width; ++x)
         {
-            const uint32_t x_l = (0 == x) ? 0 : x - 1;
-            const uint32_t x_r = (image.width - 1 == x) ? x : x + 1;
 
-            buffer_x[y * image.width + x] =
-            static_cast<OutputT>(
-                (row_top[x_r] - row_top[x_l]) +
-                ((row_mid[x_r] - row_mid[x_l]) << 1) +
-                (row_bot[x_r] - row_bot[x_l])
+            const uint32_t xl = x;
+            const uint32_t xc = x + 1;
+            const uint32_t xr = x + 2;
+
+            buffer_x[y * width + x] = static_cast<OutputT>(
+                (row_top[xr] - row_top[xl]) +
+                ((row_mid[xr] - row_mid[xl]) << 1) +
+                (row_bot[xr] - row_bot[xl])
             );
 
-            buffer_y[y * image.width + x] =
-            static_cast<OutputT>(
-                (row_top[x_l] + (row_top[x] << 1) + row_top[x_r]) -
-                (row_bot[x_l] + (row_bot[x] << 1) + row_bot[x_r])
+            buffer_y[y * width + x] = static_cast<OutputT>(
+                (row_top[xl] + (row_top[xc] << 1) + row_top[xr]) -
+                (row_bot[xl] + (row_bot[xc] << 1) + row_bot[xr])
             );
         }
     }

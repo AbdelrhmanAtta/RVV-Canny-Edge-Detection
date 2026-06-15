@@ -52,36 +52,35 @@ list-tests:
 	@ls tests/*.cpp | xargs -n 1 basename | sed 's/\.cpp//'
 
 
-# ── PHASE 4: BENCHMARKING ──────────────────────────────────────
-
+# Benchmarking Targets
 bench_O0: $(SRCS)
 	@mkdir -p ./build/bench
 	$(RV_CXX) $(RV_FLAGS_BASE) -O0 $(SRCS) -o build/bench/canny_O0.elf
-	@echo "=== -O0 ==="
+	@echo "-O0"
 	qemu-riscv64 -cpu max,vlen=512 build/bench/canny_O0.elf
 
 bench_O2: $(SRCS)
 	@mkdir -p ./build/bench
 	$(RV_CXX) $(RV_FLAGS_BASE) -O2 $(SRCS) -o build/bench/canny_O2.elf
-	@echo "=== -O2 ==="
+	@echo "-O2"
 	qemu-riscv64 -cpu max,vlen=512 build/bench/canny_O2.elf
 
 bench_O3: $(SRCS)
 	@mkdir -p ./build/bench
 	$(RV_CXX) $(RV_FLAGS_BASE) -O3 $(SRCS) -o build/bench/canny_O3.elf
-	@echo "=== -O3 ==="
+	@echo "-O3"
 	qemu-riscv64 -cpu max,vlen=512 build/bench/canny_O3.elf
 
 bench_Os: $(SRCS)
 	@mkdir -p ./build/bench
 	$(RV_CXX) $(RV_FLAGS_BASE) -Os $(SRCS) -o build/bench/canny_Os.elf
-	@echo "=== -Os ==="
+	@echo "-Os"
 	qemu-riscv64 -cpu max,vlen=512 build/bench/canny_Os.elf
 
 bench_Ofast: $(SRCS)
 	@mkdir -p ./build/bench
 	$(RV_CXX) $(RV_FLAGS_BASE) -Ofast $(SRCS) -o build/bench/canny_Ofast.elf
-	@echo "=== -Ofast ==="
+	@echo "-Ofast"
 	qemu-riscv64 -cpu max,vlen=512 build/bench/canny_Ofast.elf
 
 # Run all benchmarks sequentially
@@ -96,5 +95,5 @@ autovec_report: $(SRCS)
 
 # Binary size comparison
 size_report:
-	@echo "=== Binary sizes ==="
+	@echo "Binary sizes"
 	@ls -lh build/bench/*.elf 2>/dev/null || echo "Run make bench_all first"
