@@ -17,16 +17,16 @@
 # Debugger Files
 *.pdb
 
-# Compiled Dynamic libraries
+# Compiled Dynamic Libraries
 *.so
 *.dylib
 *.dll
 
-# Fortran module files
+# Fortran Module Files
 *.mod
 *.smod
 
-# Compiled Static libraries
+# Compiled Static Libraries
 *.lai
 *.la
 *.a
@@ -37,7 +37,7 @@
 *.out
 *.app
 
-# debug information files
+# Debug Information Files
 *.dwo
 build/
 .vscode/
@@ -47,3 +47,6 @@ latex/
 *.json
 assets/*_output.raw
 assets/rect_*.raw
+
+# Log Files
+results/autovec_report.txt
