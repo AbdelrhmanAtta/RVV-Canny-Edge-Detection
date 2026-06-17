@@ -77,7 +77,7 @@ template <typename PixelT = uint8_t, typename AccumulatorT = uint32_t>
     {
         for (int32_t x = 0; x < width; ) 
         {
-            #if defined(__riscv_v_intrinsic) && __riscv_v_intrinsic >= 12000
+            #if defined(__riscv_v) && __riscv_v >= 1000000
             size_t vl;
             vuint32m4_t sum;
             if constexpr (std::is_same_v<uint8_t, PixelT>)
@@ -96,7 +96,7 @@ template <typename PixelT = uint8_t, typename AccumulatorT = uint32_t>
                 
                 for (int32_t kx = -kernel_radius; kx <= kernel_radius; ++kx) 
                 {
-                    #if defined(__riscv_v_intrinsic) && __riscv_v_intrinsic >= 12000
+                    #if defined(__riscv_v) && __riscv_v >= 1000000
                     if constexpr (std::is_same_v<uint8_t, PixelT>)
                     {
                         vuint8m1_t pixels = __riscv_vle8_v_u8m1(&padded_input[row_offset + (x + kernel_radius + kx)], vl);
@@ -110,7 +110,7 @@ template <typename PixelT = uint8_t, typename AccumulatorT = uint32_t>
                 }
             }
 
-            #if defined(__riscv_v_intrinsic) && __riscv_v_intrinsic >= 12000
+            #if defined(__riscv_v) && __riscv_v >= 1000000
             if constexpr (std::is_same_v<uint8_t, PixelT>)
             {
                 sum = __riscv_vmul_vx_u32m4(sum, 240, vl);
@@ -167,7 +167,7 @@ template <typename PixelT = uint8_t, typename AccumulatorT = int32_t>
 
     for (uint32_t y = 0; y < ph; ++y) {
         for (uint32_t x = kernel_radius; x < pw - kernel_radius; ) {
-            #if defined(__riscv_v_intrinsic) && __riscv_v_intrinsic >= 12000
+            #if defined(__riscv_v) && __riscv_v >= 1000000
             size_t vl;
             vuint32m4_t sum;
             if constexpr (std::is_same_v<uint8_t, PixelT>) {
@@ -180,7 +180,7 @@ template <typename PixelT = uint8_t, typename AccumulatorT = int32_t>
 
             const uint32_t row_offset = y * pw;
             for (int32_t kx = -kernel_radius; kx <= kernel_radius; ++kx) {
-                #if defined(__riscv_v_intrinsic) && __riscv_v_intrinsic >= 12000
+                #if defined(__riscv_v) && __riscv_v >= 1000000
                 if constexpr (std::is_same_v<uint8_t, PixelT>) {
                     vuint8m1_t pixels = __riscv_vle8_v_u8m1(&padded_input[row_offset + (x + kx)], vl);
                     vuint16m2_t pixels16 = __riscv_vzext_vf2_u16m2(pixels, vl);
@@ -191,7 +191,7 @@ template <typename PixelT = uint8_t, typename AccumulatorT = int32_t>
                 #endif
             }
 
-            #if defined(__riscv_v_intrinsic) && __riscv_v_intrinsic >= 12000
+            #if defined(__riscv_v) && __riscv_v >= 1000000
             if constexpr (std::is_same_v<uint8_t, PixelT>) {
                 __riscv_vse32_v_u32m4(reinterpret_cast<uint32_t*>(&inter_buffer[row_offset + x]), sum, vl);
                 x += vl;
@@ -212,7 +212,7 @@ template <typename PixelT = uint8_t, typename AccumulatorT = int32_t>
 
     for (int32_t y = 0; y < height; ++y) {
         for (int32_t x = 0; x < width; ) {
-            #if defined(__riscv_v_intrinsic) && __riscv_v_intrinsic >= 12000
+            #if defined(__riscv_v) && __riscv_v >= 1000000
             size_t vl;
             vuint32m4_t sum;
             if constexpr (std::is_same_v<uint8_t, PixelT>) {
@@ -225,7 +225,7 @@ template <typename PixelT = uint8_t, typename AccumulatorT = int32_t>
 
             const uint32_t col_x = x + kernel_radius;
             for (int32_t ky = -kernel_radius; ky <= kernel_radius; ++ky) {
-                #if defined(__riscv_v_intrinsic) && __riscv_v_intrinsic >= 12000
+                #if defined(__riscv_v) && __riscv_v >= 1000000
                 if constexpr (std::is_same_v<uint8_t, PixelT>) {
                     vuint32m4_t inter_vals = __riscv_vle32_v_u32m4(reinterpret_cast<uint32_t*>(&inter_buffer[(y + kernel_radius + ky) * pw + col_x]), vl);
                     sum = __riscv_vmacc_vx_u32m4(sum, GAUSSIAN_5x5_1D_DATA[ky + kernel_radius], inter_vals, vl);
@@ -235,7 +235,7 @@ template <typename PixelT = uint8_t, typename AccumulatorT = int32_t>
                 #endif
             }
 
-            #if defined(__riscv_v_intrinsic) && __riscv_v_intrinsic >= 12000
+            #if defined(__riscv_v) && __riscv_v >= 1000000
             if constexpr (std::is_same_v<uint8_t, PixelT>) {
                 sum = __riscv_vmul_vx_u32m4(sum, 240, vl);
                 sum = __riscv_vsrl_vx_u32m4(sum, 16, vl);

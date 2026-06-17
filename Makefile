@@ -36,8 +36,6 @@ clean:
 	rm -rf build/*
 
 
-# AUTOMATIC PATTERN RULES FOR QUICK TESTING
-
 # Compiles any .cpp in tests/ to an .elf in build/target/
 build/target/debug/%.elf: tests/%.cpp $(LIB_SRCS)
 	@mkdir -p ./build/target/debug
