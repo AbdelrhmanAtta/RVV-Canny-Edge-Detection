@@ -15,13 +15,23 @@ import matplotlib.pyplot as plt
 #  @return None. Displays a grayscale plot of the image.
 def show_raw(path, w=512, h=512):
     try:
-        # Load the binary data and reshape into a 2D grid
-        img = np.fromfile(path, dtype=np.uint8).reshape((h, w))
+        file_size = os.path.getsize(path)
+        is_16bit = (file_size == w * h * 2)
+        
+        dtype = np.uint16 if is_16bit else np.uint8
+        
+        img = np.fromfile(path, dtype=dtype).reshape((h, w))
+        
+        if is_16bit:
+            img = ((img - img.min()) / (img.max() - img.min()) * 255).astype(np.uint8)
         
         plt.imshow(img, cmap='gray', vmin=0, vmax=255)
-        plt.title(f"Raw Image: {os.path.basename(path)}")
-        plt.axis('off')  # Hide axes for a cleaner look
+        plt.title(f"Raw Image: {os.path.basename(path)} ({'16-bit' if is_16bit else '8-bit'})")
+        plt.axis('off')
         plt.show()
+        
+    except Exception as e:
+        print(f"Error: {e}")
     except FileNotFoundError:
         print(f"Error: File not found at {path}")
     except ValueError as e:
