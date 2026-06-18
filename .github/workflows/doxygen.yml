@@ -19,8 +19,13 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false # Turn off the broken recursive check entirely
           fetch-depth: 0
+
+      - name: Fetch Only Required Theme Submodule
+        run: |
+          # Safely download only the documentation CSS theme folder
+          git submodule update --init --recursive external/doxygen-awesome-css
 
       - name: Install Doxygen & Graphviz
         run: |
