@@ -1,30 +1,30 @@
-# --- Project Information ---
+# Project Information
 PROJECT_NAME           = "RVV Canny Edge Detection"
 PROJECT_NUMBER         = 1.0
 OUTPUT_DIRECTORY       = .
 CREATE_SUBDIRS         = NO
 ALLOW_UNICODE_NAMES    = YES
 
-# --- Input Configuration ---
+# Input Configuration
 INPUT                  = README.md inc src tools
 RECURSIVE              = YES
 FILE_PATTERNS          = *.cpp *.hpp *.h *.c *.md *.py
 EXCLUDE                = build .venv tests
 
-# --- Main Page Settings (Fixed) ---
+# Main Page Settings
 USE_MDFILE_AS_MAINPAGE = README.md
 
-# --- Extraction Settings ---
+# Extraction Settings
 EXTRACT_ALL            = YES
 EXTRACT_PRIVATE        = NO
 EXTRACT_STATIC         = YES
 
-# --- Build Settings ---
+# Build Settings
 JAVADOC_AUTOBRIEF      = YES
 OPTIMIZE_OUTPUT_FOR_C  = NO
 NUM_PROC_THREADS       = 0
 
-# --- Diagram Generation (Graphviz) ---
+# Diagram Generation (Graphviz)
 HAVE_DOT               = YES
 CALL_GRAPH             = YES
 CALLER_GRAPH           = YES
@@ -33,7 +33,7 @@ DOT_IMAGE_FORMAT       = svg
 INTERACTIVE_SVG        = YES
 DOT_PATH               = /usr/bin/dot
 
-# --- HTML Output Settings (Doxygen Awesome) ---
+# HTML Output Settings (Doxygen Awesome)
 GENERATE_HTML          = YES
 HTML_OUTPUT            = html
 HTML_FILE_EXTENSION    = .html
@@ -42,12 +42,12 @@ GENERATE_TREEVIEW      = YES
 FULL_SIDEBAR           = YES
 HTML_EXTRA_STYLESHEET  = external/doxygen-awesome-css/doxygen-awesome.css
 
-# --- Math Support ---
+# Math Support
 USE_MATHJAX            = YES
 MATHJAX_FORMAT         = HTML-CSS
 MATHJAX_RELPATH        = 
 
-# --- Source Browsing ---
+# Source Browsing
 SOURCE_BROWSER         = YES
 INLINE_SOURCES         = NO
 STRIP_CODE_COMMENTS    = NO

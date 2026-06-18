@@ -16,17 +16,16 @@ import matplotlib.pyplot as plt
 def show_raw(path, w=512, h=512):
     try:
         file_size = os.path.getsize(path)
-        is_16bit = (file_size == w * h * 2)
         
-        dtype = np.uint16 if is_16bit else np.uint8
+        dtype = np.uint16 if (file_size == w * h * 2) else np.uint8
         
         img = np.fromfile(path, dtype=dtype).reshape((h, w))
         
-        if is_16bit:
+        if (file_size == w * h * 2):
             img = ((img - img.min()) / (img.max() - img.min()) * 255).astype(np.uint8)
         
         plt.imshow(img, cmap='gray', vmin=0, vmax=255)
-        plt.title(f"Raw Image: {os.path.basename(path)} ({'16-bit' if is_16bit else '8-bit'})")
+        plt.title(f"Raw Image: {os.path.basename(path)} ({'16-bit' if (file_size == w * h * 2) else '8-bit'})")
         plt.axis('off')
         plt.show()
         
@@ -47,14 +46,13 @@ if __name__ == "__main__":
         sys.exit(1)
 
     try:
-        # Parse dimensions from CLI arguments
         image_width = int(sys.argv[2]) if len(sys.argv) > 2 else 512
         image_height = int(sys.argv[3]) if len(sys.argv) > 3 else image_width
     except ValueError:
         print("Invalid dimensions provided. Width and Height must be integers.")
         sys.exit(1)
 
-    # Construct the path to the assets folder relative to this script
+    # ../assets directory relative to this script
     assets_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../assets'))
     image_path = os.path.join(assets_dir, sys.argv[1])
     

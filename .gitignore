@@ -48,5 +48,3 @@ latex/
 assets/*_output.raw
 assets/rect_*.raw
 
-# Log Files
-results/autovec_report.txt
