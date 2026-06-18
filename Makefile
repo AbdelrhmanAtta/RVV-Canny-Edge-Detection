@@ -36,8 +36,6 @@ clean:
 	rm -rf build/*
 
 
-# AUTOMATIC PATTERN RULES FOR QUICK TESTING
-
 # Compiles any .cpp in tests/ to an .elf in build/target/
 build/target/debug/%.elf: tests/%.cpp $(LIB_SRCS)
 	@mkdir -p ./build/target/debug
@@ -71,20 +69,8 @@ bench-O3: $(SRCS)
 	@echo "-O3"
 	qemu-riscv64 -cpu max,vlen=512 build/bench/canny_O3.elf
 
-bench-Os: $(SRCS)
-	@mkdir -p ./build/bench
-	$(RV_CXX) $(RV_CXXFLAGS_BASE) -Os $(SRCS) -o build/bench/canny_Os.elf
-	@echo "-Os"
-	qemu-riscv64 -cpu max,vlen=512 build/bench/canny_Os.elf
-
-bench-Ofast: $(SRCS)
-	@mkdir -p ./build/bench
-	$(RV_CXX) $(RV_CXXFLAGS_BASE) -Ofast $(SRCS) -o build/bench/canny_Ofast.elf
-	@echo "-Ofast"
-	qemu-riscv64 -cpu max,vlen=512 build/bench/canny_Ofast.elf
-
 # Run all benchmarks sequentially
-bench-all: bench-O0 bench-O2 bench-O3 bench-Os bench-Ofast
+bench-all: bench-O0 bench-O2 bench-O3
 
 # Auto-vectorization report (saved to results/)
 autovec-report: $(SRCS)
