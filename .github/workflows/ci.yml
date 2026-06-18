@@ -1,0 +1,41 @@
+name: Native Host-Side Unit Tests CI
+
+on:
+  push:
+    branches: [ main, fix/gem5, vectorizing-sobel ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        submodules: false 
+
+    - name: Install Native Build Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake g++ libgtest-dev
+
+    - name: Build and Install GoogleTest Package
+      run: |
+        cd /usr/src/googletest
+        sudo cmake .
+        sudo cmake --build . --target install
+
+    - name: Compile and Run Unit Tests
+      run: |
+        # Explicit direct compilation matching your host gtest structures
+        g++ -std=c++17 -O2 \
+          tests/unit_tests.cpp \
+          src/io.cpp \
+          -Iinc \
+          -lgtest -lgtest_main -lpthread \
+          -o native_tests_executable
+
+        # Execute the 10 unit tests to check constraints
+        ./native_tests_executable
