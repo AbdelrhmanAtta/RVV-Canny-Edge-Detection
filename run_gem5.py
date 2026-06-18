@@ -12,7 +12,7 @@ system.clk_domain = SrcClockDomain(clock='3GHz', voltage_domain=VoltageDomain())
 system.mem_mode = 'timing'
 system.mem_ranges = [AddrRange('4GB')] 
 system.cpu = TimingSimpleCPU()
-system.cpu.isa = [RiscvISA(vlen=256)]
+system.cpu.isa = [RiscvISA(vlen=128)]
 
 class L1ICache(Cache):
     size = '64kB'

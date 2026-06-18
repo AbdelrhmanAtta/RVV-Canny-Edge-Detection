@@ -30,7 +30,7 @@
  *              bench-rvv-O3     ->  -march=rv64gcv  (__riscv_v defined)
  *
 **/
-#define LMUL_SWEEP   4
+#define LMUL_SWEEP   1
 #define PIPELINE_SEL 3
 
 /* GEM5 Setup */
