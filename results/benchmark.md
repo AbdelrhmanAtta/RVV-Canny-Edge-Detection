@@ -5,7 +5,7 @@
 Unlike standard QEMU user-mode emulators, this project utilizes **gem5** to provide a deterministic, microarchitecturally detailed simulation. The benchmarks were executed using a custom `run_gem5.py` configuration with the following hardware specifications:
 
 * **CPU Model:** `TimingSimpleCPU` @ 3.0 GHz
-* **ISA Extension:** RISC-V with RVV enabled (**VLEN = 128 bits**)
+* **ISA Extension:** RISC-V with RVV enabled (**VLEN = 128 & 256 bits**)
 * **L1 Instruction Cache:** 64 kB, 4-way set associative, 1-cycle latency (4 MSHRs)
 * **L1 Data Cache:** 64 kB, 4-way set associative, 2-cycle latency (16 MSHRs)
 * **L2 Cache:** 2 MB, 8-way set associative, 12-cycle latency (32 MSHRs)
