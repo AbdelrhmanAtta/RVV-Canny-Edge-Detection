@@ -29,10 +29,9 @@ jobs:
 
     - name: Compile and Run Unit Tests
       run: |
-        # Explicit direct compilation matching your host gtest structures
-        g++ -std=c++17 -O2 \
+        # Configured for C++23 and header-only io routines
+        g++ -std=c++23 -O2 \
           tests/unit_tests.cpp \
-          src/io.cpp \
           -Iinc \
           -lgtest -lgtest_main -lpthread \
           -o native_tests_executable
