@@ -98,3 +98,51 @@ Amdahl's Law dictates that the theoretical maximum speedup of a system is strict
 
 If we were to spend hours writing highly optimized RVV intrinsics for a minor stage, the global speedup would be mathematically capped. By focusing our intrinsic optimization efforts on the Gaussian and Sobel stages, we target the mathematical bottleneck of the pipeline, ensuring our manual vectorization yields the highest possible return on investment.
 
+---
+
+## 6. RVV Optimization Analysis
+
+### 6.1 LMUL (Vector Length Multiplier) Sweeps
+*This test evaluates the performance impact of grouping vector registers (LMUL). Higher LMUL values process more elements per instruction but increase register pressure, which can lead to spilling if the compiler runs out of architectural registers. It also increases pressure on the memory subsystem.*
+
+**Benchmark Configuration:**
+* **Optimization Level:** `-O3`
+* **VLEN:** 256 bits
+* **Target Stages:** Gaussian Separable Pass, Sobel Filter, Magnitude L1
+
+#### 1. Gaussian Separable Filter
+
+| LMUL Setting | Time (ms) | Cycle Count | Instructions (simInsts) | CPI |
+| :--- | :--- | :--- | :--- | :--- |
+| **LMUL = 1** | 2.928 | 8,793,490 | 1,152,087 | 7.633 |
+| **LMUL = 2** | **2.748** | **8,250,477** | 765,527 | 10.778 |
+| **LMUL = 4** | 2.760 | 8,289,203 | 769,142 | 10.777 |
+
+#### 2. Sobel Filter
+
+| LMUL Setting | Time (ms) | Cycle Count | Instructions (simInsts) | CPI |
+| :--- | :--- | :--- | :--- | :--- |
+| **LMUL = 1** | 0.688 | 2,066,219 | 623,934 | 3.312 |
+| **LMUL = 2** | **0.579** | **1,738,989** | 407,694 | 4.265 |
+| **LMUL = 4** | 0.652 | 1,956,711 | 340,374 | 5.749 |
+
+#### 3. Magnitude L1
+
+| LMUL Setting | Time (ms) | Cycle Count | Instructions (simInsts) | CPI |
+| :--- | :--- | :--- | :--- | :--- |
+| **LMUL = 1** | **0.600** | **1,802,306** | 410,320 | 4.392 |
+| **LMUL = 2** | 0.632 | 1,898,467 | 410,320 | 4.627 |
+| **LMUL = 4** | 0.633 | 1,899,311 | 410,320 | 4.629 |
+
+### 6.2 Sweep Analysis
+
+**The Memory & Register Wall (`LMUL=4`)**
+Pushing the vector grouping to `LMUL=4` consistently degrades execution time across all three stages, exposing hardware limits:
+1. **Register Spilling (Sobel):** A convolution like the Sobel filter requires simultaneous access to the top, middle, and bottom image rows to compute the gradients. At `LMUL=4`, registers are grouped in blocks of four, restricting the number of logical registers available and forcing the compiler to spill intermediate data to the stack.
+2. **Memory Bottlenecks:** For the Sobel filter at `LMUL=4`, a single vector instruction demands 1024 bits (128 bytes) of data. Even though the instruction count successfully drops to 340k, the CPI skyrockets to 5.749. The memory subsystem simply cannot feed the vector units fast enough, resulting in heavy processor stalls. 
+
+**Compiler Vectorization Limits (Magnitude L1)**
+The Magnitude stage (computing $|G_x| + |G_y|$) presents a highly irregular scaling pattern. The dynamic instruction count is exactly **410,320** across all three LMUL settings. This indicates that the compiler failed to utilize the wider vector lengths to unroll or pack more data per loop iteration. Because the instruction volume remained static, higher LMUL configurations strictly degraded performance due to the increased latency (CPI) of setting up wider vector operations without the benefit of doing more math per instruction. For this specific loop, `LMUL=1` remains the most efficient.
+
+**The Convolution Sweet Spot (`LMUL=2`)**
+For the sliding window convolutions (Gaussian and Sobel), transitioning from `LMUL=1` to `LMUL=2` yields the optimal performance configuration. By processing twice as many pixels per loop iteration, the dynamic instruction count drops significantly (~33% for Gaussian, ~34% for Sobel). While requesting 512 bits (64 bytes) of data per memory instruction slightly inflates the average CPI due to cache interface delays, the massive reduction in instruction volume easily offsets the latency, yielding the absolute fastest execution times for those stages.

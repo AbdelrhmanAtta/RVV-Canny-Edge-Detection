@@ -31,7 +31,7 @@
  *
 **/
 #define LMUL_SWEEP   4
-#define PIPELINE_SEL 4
+#define PIPELINE_SEL 3
 
 /* GEM5 Setup */
 #ifdef GEM5_MODE
