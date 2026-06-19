@@ -13,6 +13,10 @@
 #include "../inc/gaussian.hpp"
 #include "../inc/sobel.hpp"
 #include "../inc/gradient.hpp"
+// Include the new headers for the rest of the pipeline
+#include "../inc/nonmaximum_suppression.hpp" 
+#include "../inc/double_thresholding.hpp"
+#include "../inc/hysteresis_tracking.hpp"
 
 template <typename T>
 image::io::metadata_t<T> allocate_image(uint32_t w, uint32_t h) {
@@ -37,41 +41,67 @@ TEST(CannyPipeline, ProcessAndSaveAllImages) {
 
     for(const auto& base : bases) {
         for(const auto& [w, h] : dims) {
-            std::string prefix = base + std::to_string(w) + "x" + std::to_string(h);
-            std::string src = prefix + ".raw";
+            // src: Original input file (e.g., circ512x512.raw)
+            std::string base_name = base + std::to_string(w) + "x" + std::to_string(h);
+            std::string src = base_name + ".raw";
+            
+            // prefix: Used for saving generated stages (e.g., google_circ512x512)
+            std::string prefix = "google_" + base_name; 
 
             auto img_orig = allocate_image<uint8_t>(w, h);
             if(image::io::load_raw<uint8_t>(src, img_orig) != Status::E_OK) {
                 continue;
             }
 
+            // 1. Spatial Gaussian
             auto img_spatial = allocate_image<uint8_t>(w, h);
             std::memcpy(img_spatial.buffer.get(), img_orig.buffer.get(), img_orig.pixel_count);
             EXPECT_EQ(processing::spatial_5x5(img_spatial), Status::E_OK);
             EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_spatial.raw", img_spatial), Status::E_OK);
 
+            // 2. Separable Gaussian (Saved as _sep.raw to match viewer)
             auto img_separable = allocate_image<uint8_t>(w, h);
             std::memcpy(img_separable.buffer.get(), img_orig.buffer.get(), img_orig.pixel_count);
             EXPECT_EQ(processing::separable_5x5(img_separable), Status::E_OK);
-            EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_separable.raw", img_separable), Status::E_OK);
+            EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_sep.raw", img_separable), Status::E_OK);
 
+            // 3. Sobel Gradients
             auto gx = allocate_image<int16_t>(w, h);
             auto gy = allocate_image<int16_t>(w, h);
             EXPECT_EQ(processing::spatial_3x3(img_separable, gx.buffer.get(), gy.buffer.get()), Status::E_OK);
             EXPECT_EQ(image::io::save_raw<int16_t>(prefix + "_gx.raw", gx), Status::E_OK);
             EXPECT_EQ(image::io::save_raw<int16_t>(prefix + "_gy.raw", gy), Status::E_OK);
 
+            // 4. Magnitudes (Saved as _mag1.raw and _mag2.raw to match viewer)
             auto mag_l1 = allocate_image<uint8_t>(w, h);
             EXPECT_EQ(processing::l1(mag_l1, gx.buffer.get(), gy.buffer.get()), Status::E_OK);
-            EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_mag_l1.raw", mag_l1), Status::E_OK);
+            EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_mag1.raw", mag_l1), Status::E_OK);
 
             auto mag_l2 = allocate_image<uint8_t>(w, h);
             EXPECT_EQ(processing::l2(mag_l2, gx.buffer.get(), gy.buffer.get()), Status::E_OK);
-            EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_mag_l2.raw", mag_l2), Status::E_OK);
+            EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_mag2.raw", mag_l2), Status::E_OK);
 
+            // 5. Direction
             auto dir = allocate_image<uint8_t>(w, h);
             EXPECT_EQ(processing::direction(dir, gx.buffer.get(), gy.buffer.get()), Status::E_OK);
             EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_dir.raw", dir), Status::E_OK);
+
+            // 6. Non-Maximum Suppression (Using mag_l2 as the standard)
+            auto nms_out = allocate_image<uint8_t>(w, h);
+            EXPECT_EQ(processing::nms(mag_l2, dir, nms_out), Status::E_OK);
+            EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_nms.raw", nms_out), Status::E_OK);
+
+            // 7. Double Thresholding
+            auto double_thresh_out = allocate_image<uint8_t>(w, h);
+            std::memcpy(double_thresh_out.buffer.get(), nms_out.buffer.get(), nms_out.pixel_count);
+            EXPECT_EQ(processing::double_thresholding(double_thresh_out, static_cast<uint8_t>(20), static_cast<uint8_t>(60)), Status::E_OK);
+            EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_double_thresholding.raw", double_thresh_out), Status::E_OK);
+
+            // 8. Hysteresis
+            auto hysteresis_out = allocate_image<uint8_t>(w, h);
+            std::memcpy(hysteresis_out.buffer.get(), nms_out.buffer.get(), nms_out.pixel_count);
+            EXPECT_EQ(processing::hysteresis(hysteresis_out, static_cast<uint8_t>(20), static_cast<uint8_t>(60)), Status::E_OK);
+            EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_hysteresis.raw", hysteresis_out), Status::E_OK);
         }
     }
 }
@@ -281,3 +311,4 @@ int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
+
