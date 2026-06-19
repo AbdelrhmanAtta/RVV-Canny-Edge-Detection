@@ -256,8 +256,8 @@ The following table summarizes the execution time (in ms) and binary size across
 | **Gaussian 5x5** | 472.992 | 20.881 | 14.959 | 14.959 | 3.125 | **2.748** |
 | **Sobel Gx/Gy** | 302.105 | 4.265 | 3.852 | 3.852 | 0.878 | **0.579** |
 | **Magnitude (L1)** | 112.181 | 6.397 | 5.375 | 5.375 | 0.823 | **0.600** |
-| **Direction** | 47.655 | 6.185 | 6.031 | 6.031 | 6.031 | 6.031 |
-| **Binary Size** | 128 KB | 96 KB | 94 KB | 94 KB | 108 KB | 108 KB |
+| **Direction** | 47.655 | 6.185 | 6.031 | 6.031 | - | - |
+| **Binary Size** | 1,517,968 | 1,208,313 | 1,208,897 | 1,208,897 | 1,208,633 | 1,208,633 |
 
 > *Note: RVV metrics represent the optimal LMUL setting for each specific stage (Sobel/Gaussian = LMUL=2; Magnitude = LMUL=1). Direction computation remained scalar across all RVV tests.*
 
@@ -269,3 +269,4 @@ The following table summarizes the execution time (in ms) and binary size across
 2.  **VLEN Sensitivity:** The introduction of RVV intrinsics provided an order-of-magnitude leap in performance. However, comparing `VLEN=128` to `VLEN=256` shows that the performance is not strictly linear; memory access patterns and the overhead of the strip-mining loop mean that doubling the vector length provides roughly a 15–30% performance gain rather than a 2× speedup.
 3.  **Binary Size Trade-off:** The RVV-optimized binary is slightly larger (~14 kB) than the `-O3` scalar binary. This is expected, as the intrinsic implementations require additional instructions for loop control (strip-mining), setting the vector length, and managing mask/configuration states that a standard scalar compiler does not generate.
 4.  **Scalar Bottlenecks:** The **Direction** stage remains the "long pole" in the tent once the convolutions are optimized. Because the direction logic relies heavily on cross-multiplication for angle quantization to avoid branching, it is inherently scalar-friendly. Future optimizations for this stage would require algorithmic changes rather than simple vectorization.
+

@@ -1,4 +1,8 @@
 # Canny Edge Detection on RISC-V using RVV
+[![Native Host-Side Unit Tests CI](https://github.com/AbdelrhmanAtta/RVV-Canny-Edge-Detection/actions/workflows/ci.yml/badge.svg)](https://github.com/AbdelrhmanAtta/RVV-Canny-Edge-Detection/actions/workflows/ci.yml)
+![GitHub stars](https://img.shields.io/github/stars/AbdelrhmanAtta/RVV-Canny-Edge-Detection)
+![GitHub last commit](https://img.shields.io/github/last-commit/AbdelrhmanAtta/RVV-Canny-Edge-Detection)
+
 **Target Architecture:** `rv64gcv` (QEMU User-mode)
 
 ## Overview
