@@ -194,7 +194,7 @@ if __name__ == "__main__":
 
         gen = UnitTestsRawGenerator(size=max(image_height, image_width))
 
-        assets_path = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../assets'))
+        assets_path = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../tests_assets'))
         if not os.path.exists(assets_path):
             os.makedirs(assets_path)
 
@@ -212,6 +212,7 @@ if __name__ == "__main__":
         }
 
         for filename, data in images.items():
-            filepath = os.path.join(assets_path, f"{filename}.raw")
+            filepath = os.path.join(assets_path, f"{filename}{image_width}x{image_height}.raw")
             data.tofile(filepath)
             print(f"Generated {filepath}")
+

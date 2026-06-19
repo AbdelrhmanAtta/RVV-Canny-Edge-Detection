@@ -31,7 +31,7 @@
  *
 **/
 #define LMUL_SWEEP   1
-#define PIPELINE_SEL 6
+#define PIPELINE_SEL 3
 
 /* GEM5 Setup */
 #ifdef GEM5_MODE
@@ -129,7 +129,7 @@ int main()
         {
             auto mag = make_copy(image);
             BENCH("Magnitude L1",
-                (void)processing::l1(mag, gx, gy);
+            (void)processing::l1<uint8_t, int16_t, uint16_t, LMUL_SWEEP>(mag, gx, gy);
             )
         }
 #endif

@@ -13,13 +13,112 @@
 
 namespace processing
 {
+
+#if defined(__riscv_v) && __riscv_v >= 1000000
+
+template <int LMUL> struct gradient_rvv_traits;
+
+// ---- LMUL = 1 ---------------------------------------------------------
+template <> struct gradient_rvv_traits<1>
+{
+    using i16 = vint16m1_t;
+    using u16 = vuint16m1_t;   // native-width unsigned 16, same LMUL as i16
+    using u32 = vuint32m2_t;   // widened from u16: m1 -> m2
+    using u8  = vuint8mf2_t;   // narrowed from u16: m1 / 2 = mf2
+
+    static size_t setvl_e16(size_t n) { return __riscv_vsetvl_e16m1(n); }
+
+    static i16 vle16_i(const int16_t* p, size_t vl)  { return __riscv_vle16_v_i16m1(p, vl); }
+    static u16 vle16_u(const uint16_t* p, size_t vl) { return __riscv_vle16_v_u16m1(p, vl); }
+    static i16 vneg_i(i16 v, size_t vl)              { return __riscv_vneg_v_i16m1(v, vl); }
+    static i16 vmax_i(i16 a, i16 b, size_t vl)       { return __riscv_vmax_vv_i16m1(a, b, vl); }
+    static u16 reinterpret(i16 v)                    { return __riscv_vreinterpret_v_i16m1_u16m1(v); }
+    static u16 vadd_u(u16 a, u16 b, size_t vl)       { return __riscv_vadd_vv_u16m1(a, b, vl); }
+    static void vse16_u(uint16_t* p, u16 v, size_t vl) { __riscv_vse16_v_u16m1(p, v, vl); }
+
+    // Reduction dest is always m1 — ISA rule, not parameterized by LMUL.
+    static vuint16m1_t vredmax(u16 v, vuint16m1_t acc, size_t vl)
+    {
+        return __riscv_vredmax_vs_u16m1_u16m1(v, acc, vl);
+    }
+
+    static u32 vwmulu_u(u16 v, uint16_t s, size_t vl) { return __riscv_vwmulu_vx_u32m2(v, s, vl); }
+    static u32 vdivu_u(u32 v, uint32_t s, size_t vl)  { return __riscv_vdivu_vx_u32m2(v, s, vl); }
+    static u16 vncvt_u32_u16(u32 v, size_t vl)        { return __riscv_vncvt_x_x_w_u16m1(v, vl); }
+    static u8  vncvt_u16_u8(u16 v, size_t vl)         { return __riscv_vncvt_x_x_w_u8mf2(v, vl); }
+    static void vse8_u(uint8_t* p, u8 v, size_t vl)   { __riscv_vse8_v_u8mf2(p, v, vl); }
+};
+
+// ---- LMUL = 2 ---------------------------------------------------------
+template <> struct gradient_rvv_traits<2>
+{
+    using i16 = vint16m2_t;
+    using u16 = vuint16m2_t;
+    using u32 = vuint32m4_t;   // widened from u16: m2 -> m4
+    using u8  = vuint8m1_t;    // narrowed from u16: m2 / 2 = m1
+
+    static size_t setvl_e16(size_t n) { return __riscv_vsetvl_e16m2(n); }
+
+    static i16 vle16_i(const int16_t* p, size_t vl)  { return __riscv_vle16_v_i16m2(p, vl); }
+    static u16 vle16_u(const uint16_t* p, size_t vl) { return __riscv_vle16_v_u16m2(p, vl); }
+    static i16 vneg_i(i16 v, size_t vl)              { return __riscv_vneg_v_i16m2(v, vl); }
+    static i16 vmax_i(i16 a, i16 b, size_t vl)       { return __riscv_vmax_vv_i16m2(a, b, vl); }
+    static u16 reinterpret(i16 v)                    { return __riscv_vreinterpret_v_i16m2_u16m2(v); }
+    static u16 vadd_u(u16 a, u16 b, size_t vl)       { return __riscv_vadd_vv_u16m2(a, b, vl); }
+    static void vse16_u(uint16_t* p, u16 v, size_t vl) { __riscv_vse16_v_u16m2(p, v, vl); }
+
+    static vuint16m1_t vredmax(u16 v, vuint16m1_t acc, size_t vl)
+    {
+        return __riscv_vredmax_vs_u16m2_u16m1(v, acc, vl);
+    }
+
+    static u32 vwmulu_u(u16 v, uint16_t s, size_t vl) { return __riscv_vwmulu_vx_u32m4(v, s, vl); }
+    static u32 vdivu_u(u32 v, uint32_t s, size_t vl)  { return __riscv_vdivu_vx_u32m4(v, s, vl); }
+    static u16 vncvt_u32_u16(u32 v, size_t vl)        { return __riscv_vncvt_x_x_w_u16m2(v, vl); }
+    static u8  vncvt_u16_u8(u16 v, size_t vl)         { return __riscv_vncvt_x_x_w_u8m1(v, vl); }
+    static void vse8_u(uint8_t* p, u8 v, size_t vl)   { __riscv_vse8_v_u8m1(p, v, vl); }
+};
+
+// ---- LMUL = 4 ---------------------------------------------------------
+template <> struct gradient_rvv_traits<4>
+{
+    using i16 = vint16m4_t;
+    using u16 = vuint16m4_t;
+    using u32 = vuint32m8_t;   // widened from u16: m4 -> m8
+    using u8  = vuint8m2_t;    // narrowed from u16: m4 / 2 = m2
+
+    static size_t setvl_e16(size_t n) { return __riscv_vsetvl_e16m4(n); }
+
+    static i16 vle16_i(const int16_t* p, size_t vl)  { return __riscv_vle16_v_i16m4(p, vl); }
+    static u16 vle16_u(const uint16_t* p, size_t vl) { return __riscv_vle16_v_u16m4(p, vl); }
+    static i16 vneg_i(i16 v, size_t vl)              { return __riscv_vneg_v_i16m4(v, vl); }
+    static i16 vmax_i(i16 a, i16 b, size_t vl)       { return __riscv_vmax_vv_i16m4(a, b, vl); }
+    static u16 reinterpret(i16 v)                    { return __riscv_vreinterpret_v_i16m4_u16m4(v); }
+    static u16 vadd_u(u16 a, u16 b, size_t vl)       { return __riscv_vadd_vv_u16m4(a, b, vl); }
+    static void vse16_u(uint16_t* p, u16 v, size_t vl) { __riscv_vse16_v_u16m4(p, v, vl); }
+
+    static vuint16m1_t vredmax(u16 v, vuint16m1_t acc, size_t vl)
+    {
+        return __riscv_vredmax_vs_u16m4_u16m1(v, acc, vl);
+    }
+
+    static u32 vwmulu_u(u16 v, uint16_t s, size_t vl) { return __riscv_vwmulu_vx_u32m8(v, s, vl); }
+    static u32 vdivu_u(u32 v, uint32_t s, size_t vl)  { return __riscv_vdivu_vx_u32m8(v, s, vl); }
+    static u16 vncvt_u32_u16(u32 v, size_t vl)        { return __riscv_vncvt_x_x_w_u16m4(v, vl); }
+    static u8  vncvt_u16_u8(u16 v, size_t vl)         { return __riscv_vncvt_x_x_w_u8m2(v, vl); }
+    static void vse8_u(uint8_t* p, u8 v, size_t vl)   { __riscv_vse8_v_u8m2(p, v, vl); }
+};
+
+#endif // __riscv_v
+
+
 /** @brief  Compute the L1 gradient magnitude of an image.
  *  @param  image The input image metadata.
  *  @param  Gx The x-component of the gradient.
  *  @param  Gy The y-component of the gradient.
  *  @return Status indicating success or failure.
  */
-template <typename PixelT = uint8_t, typename GradientT = int16_t, typename MagT = uint16_t>
+template <typename PixelT = uint8_t, typename GradientT = int16_t, typename MagT = uint16_t, int LMUL = 4>
 [[nodiscard]] Status l1(const image::io::metadata_t<PixelT>& image,
                         const GradientT* __restrict Gx,
                         const GradientT* __restrict Gy)
@@ -36,58 +135,78 @@ template <typename PixelT = uint8_t, typename GradientT = int16_t, typename MagT
     MagT max_value = 0;
 
 #if defined(__riscv_v) && __riscv_v >= 1000000
+    using T = gradient_rvv_traits<LMUL>;
+
+    // v_max_magnitude: reduction destination accumulator — ALWAYS m1 regardless
+    // of LMUL. This is an ISA rule, not a choice, so it lives outside the traits.
+    vuint16m1_t v_max_magnitude = __riscv_vmv_v_x_u16m1(0, 1);
+    size_t vl;
+
+    // --- Pass 1: |Gx| + |Gy|, track running max via vector reduction ---
+    for (uint32_t i = 0; i < count; i += vl)
     {
-        size_t vl      = __riscv_vsetvl_e16m2(count);
-        auto   vmax_acc = __riscv_vmv_v_x_u16m2(0, vl);
+        // vsetvl: ask the hardware how many i16 elements (at this LMUL) fit in one
+        // vector register group for the remaining tail. VLA-safe: works unmodified
+        // whether VLEN is 128, 256, or 512 -- the tail (count - i) just shrinks faster
+        // on wider hardware.
+        vl = T::setvl_e16(count - i);
 
-        uint32_t i = 0;
-        while (i < count)
-        {
-            vl = __riscv_vsetvl_e16m2(count - i);
+        // vle16: load Gx/Gy chunks as signed 16-bit. Sobel output on 8-bit pixels
+        // fits comfortably in int16_t, so no widening is needed on load.
+        typename T::i16 vgx = T::vle16_i(Gx + i, vl);
+        typename T::i16 vgy = T::vle16_i(Gy + i, vl);
 
-            vint16m2_t vgx = __riscv_vle16_v_i16m2(Gx + i, vl);
-            vint16m2_t vgy = __riscv_vle16_v_i16m2(Gy + i, vl);
+        // vmax(v, -v): elementwise absolute value. RVV has no dedicated vabs,
+        // so abs(x) = max(x, -x) is the standard idiom.
+        typename T::i16 vgx_abs = T::vmax_i(vgx, T::vneg_i(vgx, vl), vl);
+        typename T::i16 vgy_abs = T::vmax_i(vgy, T::vneg_i(vgy, vl), vl);
 
-            vint16m2_t vgx_abs = __riscv_vmax_vv_i16m2(vgx, __riscv_vneg_v_i16m2(vgx, vl), vl);
-            vint16m2_t vgy_abs = __riscv_vmax_vv_i16m2(vgy, __riscv_vneg_v_i16m2(vgy, vl), vl);
+        // reinterpret + vadd: L1 magnitude = |Gx| + |Gy|. The sum of two
+        // non-negative i16 values is always representable as u16, so we
+        // reinterpret the absolute values before adding as unsigned.
+        typename T::u16 vmag = T::vadd_u(T::reinterpret(vgx_abs), T::reinterpret(vgy_abs), vl);
 
-            vint16m2_t  vmag_s = __riscv_vadd_vv_i16m2(vgx_abs, vgy_abs, vl);
-            vuint16m2_t vmag   = __riscv_vreinterpret_v_i16m2_u16m2(vmag_s);
+        T::vse16_u(pointer_buffer.get() + i, vmag, vl);
 
-            __riscv_vse16_v_u16m2(pointer_buffer.get() + i, vmag, vl);
-
-            vuint16m1_t vmax_scalar = __riscv_vmv_v_x_u16m1(0, 1);
-            vmax_scalar = __riscv_vredmax_vs_u16m2_u16m1(vmag, vmax_scalar, vl);
-
-            MagT chunk_max = static_cast<MagT>(__riscv_vmv_x_s_u16m1_u16(vmax_scalar));
-            if (chunk_max > max_value) max_value = chunk_max;
-
-            i += static_cast<uint32_t>(vl);
-        }
+        // vredmax: vector reduction. Collapses the whole vl-wide chunk into a
+        // single scalar max. Per the RVV spec, reduction destinations are always
+        // m1 regardless of the source LMUL -- this is independent of our LMUL choice.
+        v_max_magnitude = T::vredmax(vmag, v_max_magnitude, vl);
     }
 
+    // vmv_x_s: extract the reduced scalar out of element 0 of the m1 result
+    // register into a plain C++ value so we can compare/accumulate it.
+    max_value = static_cast<MagT>(__riscv_vmv_x_s_u16m1_u16(v_max_magnitude));
+
+    if (max_value == 0)
     {
-        float scale = (max_value > 0) ? 255.0f / static_cast<float>(max_value) : 0.0f;
+        std::fill(image.buffer.get(), image.buffer.get() + count, PixelT{0});
+        return Status::E_OK;
+    }
 
-        uint32_t i = 0;
-        while (i < count)
-        {
-            size_t vl = __riscv_vsetvl_e16m2(count - i);
+    // --- Pass 2: normalize to [0, 255] — widen u16->u32, scale, divide, narrow x2 ---
+    for (uint32_t i = 0; i < count; i += vl)
+    {
+        // Second pass re-strip-mines at the same LMUL as the first pass for
+        // consistency, though it is independent: each pass picks its own vl.
+        vl = T::setvl_e16(count - i);
 
-            vuint16m2_t vmag = __riscv_vle16_v_u16m2(pointer_buffer.get() + i, vl);
+        typename T::u16 vmag = T::vle16_u(pointer_buffer.get() + i, vl);
 
-            vuint32m4_t vmag32  = __riscv_vzext_vf2_u32m4(vmag, vl);
-            vfloat32m4_t vmagf  = __riscv_vfcvt_f_xu_v_f32m4(vmag32, vl);
-            vfloat32m4_t vscaled = __riscv_vfmul_vf_f32m4(vmagf, scale, vl);
-            vuint32m4_t  vout32 = __riscv_vfcvt_xu_f_v_u32m4(vscaled, vl);
+        // vwmulu (widen-multiply): magnitude * 255, widening u16 -> u32 in one
+        // instruction so the multiply can't overflow before the divide.
+        typename T::u32 vscaled = T::vwmulu_u(vmag, 255, vl);
 
-            vuint16m2_t vout16 = __riscv_vnclipu_wx_u16m2(vout32, 0, __RISCV_VXRM_RNU, vl);
-            vuint8m1_t  vout8  = __riscv_vnclipu_wx_u8m1(vout16, 0, __RISCV_VXRM_RNU, vl);
+        // vdivu: divide by the global max found in pass 1 to land in [0, 255].
+        vscaled = T::vdivu_u(vscaled, max_value, vl);
 
-            __riscv_vse8_v_u8m1(reinterpret_cast<uint8_t*>(image.buffer.get()) + i, vout8, vl);
+        // vncvt (u32 -> u16 -> u8): two narrowing converts back down to 8-bit.
+        // Values are already bounded to [0, 255] by construction, so this is a
+        // plain truncating narrow, not a saturating clip.
+        typename T::u16 vnarrow1 = T::vncvt_u32_u16(vscaled, vl);
+        typename T::u8  vnarrow2 = T::vncvt_u16_u8(vnarrow1, vl);
 
-            i += static_cast<uint32_t>(vl);
-        }
+        T::vse8_u(reinterpret_cast<uint8_t*>(image.buffer.get()) + i, vnarrow2, vl);
     }
 
 #else
@@ -211,3 +330,4 @@ template <typename PixelT = uint8_t, typename GradientT = int32_t>
 }
 
 } // namespace processing
+

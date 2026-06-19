@@ -41,19 +41,23 @@ if __name__ == "__main__":
     #  Expects the filename as the first argument, with optional width and height.
     #  Usage: python script.py <filename.raw> [width] [height]
     
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 3:
         print("Usage: python script.py [filename] [width] [height]")
         sys.exit(1)
 
     try:
         image_width = int(sys.argv[2]) if len(sys.argv) > 2 else 512
         image_height = int(sys.argv[3]) if len(sys.argv) > 3 else image_width
+        image_location = sys.argv[4] if len(sys.argv) > 4 else "assets"
     except ValueError:
         print("Invalid dimensions provided. Width and Height must be integers.")
         sys.exit(1)
 
     # ../assets directory relative to this script
-    assets_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../assets'))
+    if image_location == "tests":
+        assets_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../tests_assets'))
+    else:
+        assets_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../assets'))
     image_path = os.path.join(assets_dir, sys.argv[1])
     
     show_raw(image_path, int(image_width), int(image_height))

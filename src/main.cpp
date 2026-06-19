@@ -1,158 +1,95 @@
-#include "io.hpp"
-#include "gaussian.hpp"
-#include "sobel.hpp"
-#include "gradient.hpp"
-#include "std_types.hpp"
-#include "utils.hpp"
+    #include <iostream>
+    #include <vector>
+    #include <string>
+    #include <chrono>
+    #include <cmath>
+    #include <algorithm>
 
-#include <cstdio>
-#include <cstdint>
-#include <memory>
-#include <time.h>
+    #include "../inc/std_types.hpp"
+    #include "../inc/utils.hpp"
+    #include "../inc/io.hpp"
+    #include "../inc/gaussian.hpp"
+    #include "../inc/sobel.hpp"
+    #include "../inc/gradient.hpp"
+    #include "../inc/nonmaximum_suppression.hpp" 
+    #include "../inc/double_thresholding.hpp"
+    #include "../inc/hysteresis_tracking.hpp"    
 
-// ── Timing helper ─────────────────────────────────────────────
-static double elapsed_ms(struct timespec s, struct timespec e)
-{
-    return (e.tv_sec  - s.tv_sec)  * 1000.0
-         + (e.tv_nsec - s.tv_nsec) / 1e6;
-}
+    struct ImageTask { std::string filename; uint32_t width; uint32_t height; };
 
-int main()
-{
-    constexpr uint32_t WIDTH  = 512;
-    constexpr uint32_t HEIGHT = 512;
-    constexpr int      ITERS  = 100;
-
-    // ── 1. Load image ──────────────────────────────────────────
-    image::io::metadata_t<uint8_t> image;
-    image.width  = WIDTH;
-    image.height = HEIGHT;
-
-    Status st = image::io::load_raw("tiger.raw", image);
-    if (st != Status::E_OK)
-    {
-        printf("ERROR: could not load assets/tiger.raw (status=%d)\n",
-               static_cast<int>(st));
-        return 1;
+    template <typename T>
+    [[nodiscard]] image::io::metadata_t<T> allocate_image(uint32_t w, uint32_t h) {
+        image::io::metadata_t<T> img;
+        img.width = w; img.height = h;
+        img.pixel_count = static_cast<size_t>(w) * h;
+        img.aligned_buffer_size = utils::memory::align_64(img.pixel_count * sizeof(T));
+        img.buffer.reset(static_cast<T*>(utils::memory::aligned_alloc(64, img.aligned_buffer_size)));
+        return img;
     }
 
-    // ── 2. Allocate Sobel output buffers ───────────────────────
-    const size_t n = image.pixel_count;
-
-    auto gx = static_cast<int16_t*>(utils::memory::aligned_alloc(64, n * sizeof(int16_t)));
-    auto gy = static_cast<int16_t*>(utils::memory::aligned_alloc(64, n * sizeof(int16_t)));
-    if (!gx || !gy) { printf("ERROR: alloc failed\n"); return 1; }
-
-    // ── 3. Benchmark helpers ───────────────────────────────────
-    struct timespec t0, t1;
-
-#define BENCH(label, code)                                      \
-    clock_gettime(CLOCK_MONOTONIC, &t0);                        \
-    for (int _i = 0; _i < ITERS; ++_i) { code; }               \
-    clock_gettime(CLOCK_MONOTONIC, &t1);                        \
-    printf("%-20s %.3f ms/iter\n", label,                       \
-           elapsed_ms(t0, t1) / ITERS);
-
-    // ── 4. Gaussian spatial ────────────────────────────────────
-    {
-        image::io::metadata_t<uint8_t> img_copy;
-        img_copy.width              = image.width;
-        img_copy.height             = image.height;
-        img_copy.pixel_count        = image.pixel_count;
-        img_copy.aligned_buffer_size = image.aligned_buffer_size;
-        auto* raw = static_cast<uint8_t*>(
-            utils::memory::aligned_alloc(64, image.aligned_buffer_size));
-        img_copy.buffer.reset(raw);
-
-        BENCH("Gaussian spatial",
-            std::copy_n(image.buffer.get(), n, img_copy.buffer.get());
-            processing::spatial_5x5(img_copy);
-        )
+    void save_normalized(const std::string& name, const int16_t* data, uint32_t w, uint32_t h) {
+        size_t count = static_cast<size_t>(w) * h;
+        auto out = allocate_image<uint8_t>(w, h);
+        int16_t min_v = 32767, max_v = -32768;
+        for(size_t i = 0; i < count; ++i) {
+            if(data[i] < min_v) min_v = data[i];
+            if(data[i] > max_v) max_v = data[i];
+        }
+        float range = (max_v - min_v == 0) ? 1.0f : static_cast<float>(max_v - min_v);
+        for(size_t i = 0; i < count; ++i) 
+            out.buffer[i] = static_cast<uint8_t>(255.0f * (static_cast<float>(data[i] - min_v) / range));
+        image::io::save_raw<uint8_t>(name, out);
     }
 
-    // ── 5. Gaussian separable ──────────────────────────────────
-    {
-        image::io::metadata_t<uint8_t> img_copy;
-        img_copy.width              = image.width;
-        img_copy.height             = image.height;
-        img_copy.pixel_count        = image.pixel_count;
-        img_copy.aligned_buffer_size = image.aligned_buffer_size;
-        auto* raw = static_cast<uint8_t*>(
-            utils::memory::aligned_alloc(64, image.aligned_buffer_size));
-        img_copy.buffer.reset(raw);
+    int main() {
+        std::vector<ImageTask> tasks = {
+            {"Aquarium_1200x1600_gray.raw", 1200, 1600},
+            {"Cars_2006_250x370_gray.raw", 250, 370},
+            {"Drone_638x480_gray.raw", 638, 480},
+            {"Me_1280x720_gray.raw", 1280, 720}
+        };
 
-        BENCH("Gaussian separable",
-            std::copy_n(image.buffer.get(), n, img_copy.buffer.get());
-            processing::separable_5x5(img_copy);
-        )
+        const uint8_t LOW = 30, HIGH = 90;
+
+        for (const auto& task : tasks) {
+            std::cout << "[Pipeline] Starting " << task.filename << "...\n";
+
+            auto img = allocate_image<uint8_t>(task.width, task.height);
+            if (image::io::load_raw<uint8_t>(task.filename, img) != Status::E_OK) continue;
+
+            // 1. Gaussian Blur
+            processing::separable_5x5(img);
+            image::io::save_raw<uint8_t>("blur_" + task.filename, img);
+
+            // 2. Sobel Gradients
+            auto gx = allocate_image<int16_t>(task.width, task.height);
+            auto gy = allocate_image<int16_t>(task.width, task.height);
+            processing::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
+            save_normalized("gx_" + task.filename, gx.buffer.get(), task.width, task.height);
+            save_normalized("gy_" + task.filename, gy.buffer.get(), task.width, task.height);
+
+            // 3. Magnitude & Direction
+            auto mag = allocate_image<uint8_t>(task.width, task.height);
+            auto dir = allocate_image<uint8_t>(task.width, task.height);
+            processing::l1(mag, gx.buffer.get(), gy.buffer.get());
+            processing::direction(dir, gx.buffer.get(), gy.buffer.get());
+            image::io::save_raw<uint8_t>("mag_" + task.filename, mag);
+            image::io::save_raw<uint8_t>("dir_" + task.filename, dir);
+
+            // 4. Non-Maximum Suppression
+            auto nms = allocate_image<uint8_t>(task.width, task.height);
+            processing::nms(mag, dir, nms);
+            image::io::save_raw<uint8_t>("nms_" + task.filename, nms);
+
+            // 5. Double Thresholding
+            processing::double_thresholding(nms, LOW, HIGH);
+            image::io::save_raw<uint8_t>("thresh_" + task.filename, nms);
+
+            // 6. Hysteresis Tracking
+            processing::hysteresis(nms, LOW, HIGH);
+            image::io::save_raw<uint8_t>("canny_" + task.filename, nms);
+            
+            std::cout << "  -> Success: All stages saved for " << task.filename << "\n";
+        }
+        return 0;
     }
-
-    // ── 6. Sobel ───────────────────────────────────────────────
-    BENCH("Sobel",
-        processing::spatial_3x3(image, gx, gy);
-    )
-
-    // ── 7. Magnitude L1 ───────────────────────────────────────
-    {
-        image::io::metadata_t<uint8_t> mag;
-        mag.width              = image.width;
-        mag.height             = image.height;
-        mag.pixel_count        = image.pixel_count;
-        mag.aligned_buffer_size = image.aligned_buffer_size;
-        auto* raw = static_cast<uint8_t*>(
-            utils::memory::aligned_alloc(64, image.aligned_buffer_size));
-        mag.buffer.reset(raw);
-
-        BENCH("Magnitude L1",
-            processing::l1(mag, gx, gy);
-        )
-    }
-
-    // ── 8. Magnitude L2 ───────────────────────────────────────
-    {
-        image::io::metadata_t<uint8_t> mag;
-        mag.width              = image.width;
-        mag.height             = image.height;
-        mag.pixel_count        = image.pixel_count;
-        mag.aligned_buffer_size = image.aligned_buffer_size;
-        auto* raw = static_cast<uint8_t*>(
-            utils::memory::aligned_alloc(64, image.aligned_buffer_size));
-        mag.buffer.reset(raw);
-
-        BENCH("Magnitude L2",
-            processing::l2(mag, gx, gy);
-        )
-    }
-
-    // ── 9. Direction ───────────────────────────────────────────
-    {
-        image::io::metadata_t<uint8_t> dir;
-        dir.width              = image.width;
-        dir.height             = image.height;
-        dir.pixel_count        = image.pixel_count;
-        dir.aligned_buffer_size = image.aligned_buffer_size;
-        auto* raw = static_cast<uint8_t*>(
-            utils::memory::aligned_alloc(64, image.aligned_buffer_size));
-        dir.buffer.reset(raw);
-
-        // direction takes int32_t Gx/Gy — upcast
-        auto gx32 = static_cast<int32_t*>(
-            utils::memory::aligned_alloc(64, n * sizeof(int32_t)));
-        auto gy32 = static_cast<int32_t*>(
-            utils::memory::aligned_alloc(64, n * sizeof(int32_t)));
-        for (size_t i = 0; i < n; ++i) { gx32[i] = gx[i]; gy32[i] = gy[i]; }
-
-        BENCH("Direction",
-            processing::direction(dir, gx32, gy32);
-        )
-
-        std::free(gx32);
-        std::free(gy32);
-    }
-
-    std::free(gx);
-    std::free(gy);
-
-    printf("\nDone. Image: %ux%u, %d iterations each.\n", WIDTH, HEIGHT, ITERS);
-    return 0;
-}

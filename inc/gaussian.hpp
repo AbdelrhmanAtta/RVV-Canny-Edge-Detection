@@ -38,9 +38,9 @@ inline constexpr uint8_t GAUSSIAN_5x5_1D_DATA[] = {1, 4, 7, 4, 1};
 
 #if defined(__riscv_v) && __riscv_v >= 1000000
 
-template <int LMUL> struct rvv_traits;
+template <int LMUL> struct gaussian_rvv_traits;
 
-template <> struct rvv_traits<1>
+template <> struct gaussian_rvv_traits<1>
 {
     using u8  = vuint8m1_t;
     using u16 = vuint16m2_t;
@@ -63,7 +63,10 @@ template <> struct rvv_traits<1>
     static u32 vsrl(u32 v, uint32_t s, size_t vl) { return __riscv_vsrl_vx_u32m4(v, s, vl);  }
 
     static u8 narrow_u32_to_u8(u32 v, size_t vl)
-    { return __riscv_vncvt_x_x_w_u8m1(__riscv_vncvt_x_x_w_u16m2(v, vl), vl); }
+    {
+        v = __riscv_vminu_vx_u32m4(v, 255, vl);
+        return __riscv_vncvt_x_x_w_u8m1(__riscv_vncvt_x_x_w_u16m2(v, vl), vl);
+    }
 
     static void vse8 (uint8_t*  p, u8  v, size_t vl) { __riscv_vse8_v_u8m1(p, v, vl);   }
     static void vse32(uint32_t* p, u32 v, size_t vl) { __riscv_vse32_v_u32m4(p, v, vl); }
@@ -71,7 +74,7 @@ template <> struct rvv_traits<1>
     static u32 vle32(const uint32_t* p, size_t vl) { return __riscv_vle32_v_u32m4(p, vl); }
 };
 
-template <> struct rvv_traits<2>
+template <> struct gaussian_rvv_traits<2>
 {
     using u8  = vuint8m2_t;
     using u16 = vuint16m4_t;
@@ -94,7 +97,10 @@ template <> struct rvv_traits<2>
     static u32 vsrl(u32 v, uint32_t s, size_t vl) { return __riscv_vsrl_vx_u32m8(v, s, vl);  }
 
     static u8 narrow_u32_to_u8(u32 v, size_t vl)
-    { return __riscv_vncvt_x_x_w_u8m2(__riscv_vncvt_x_x_w_u16m4(v, vl), vl); }
+    {
+        v = __riscv_vminu_vx_u32m8(v, 255, vl);
+        return __riscv_vncvt_x_x_w_u8m2(__riscv_vncvt_x_x_w_u16m4(v, vl), vl);
+    }
 
     static void vse8 (uint8_t*  p, u8  v, size_t vl) { __riscv_vse8_v_u8m2(p, v, vl);   }
     static void vse32(uint32_t* p, u32 v, size_t vl) { __riscv_vse32_v_u32m8(p, v, vl); }
@@ -102,7 +108,7 @@ template <> struct rvv_traits<2>
     static u32 vle32(const uint32_t* p, size_t vl) { return __riscv_vle32_v_u32m8(p, vl); }
 };
 
-template <> struct rvv_traits<4>
+template <> struct gaussian_rvv_traits<4>
 {
     // u8m4 -> u16m8 -> u32: widening to m16 is invalid.
     // Accumulator is capped at m8; pixel LMUL is 4, accumulator LMUL is 8.
@@ -127,7 +133,10 @@ template <> struct rvv_traits<4>
     static u32 vsrl(u32 v, uint32_t s, size_t vl) { return __riscv_vsrl_vx_u32m8(v, s, vl);  }
 
     static u8 narrow_u32_to_u8(u32 v, size_t vl)
-    { return __riscv_vncvt_x_x_w_u8m2(__riscv_vncvt_x_x_w_u16m4(v, vl), vl); }
+    {
+        v = __riscv_vminu_vx_u32m8(v, 255, vl);
+        return __riscv_vncvt_x_x_w_u8m2(__riscv_vncvt_x_x_w_u16m4(v, vl), vl);
+    }
 
     static void vse8 (uint8_t*  p, u8  v, size_t vl) { __riscv_vse8_v_u8m2(p, v, vl);   }
     static void vse32(uint32_t* p, u32 v, size_t vl) { __riscv_vse32_v_u32m8(p, v, vl); }
@@ -143,7 +152,7 @@ template <> struct rvv_traits<4>
  * @param   image The input image metadata, which will be modified in-place with the blurred output.
  * @return  Status indicating success or failure of the operation.
  */
-template <typename PixelT = uint8_t, typename AccumulatorT = uint32_t, int LMUL = 1>
+template <typename PixelT = uint8_t, typename AccumulatorT = uint32_t, int LMUL = 2>
 [[nodiscard]] Status spatial_5x5(image::io::metadata_t<PixelT>& image)
 {
     if (!image.height || !image.width || !image.buffer)
@@ -177,7 +186,7 @@ template <typename PixelT = uint8_t, typename AccumulatorT = uint32_t, int LMUL 
 #if defined(__riscv_v) && __riscv_v >= 1000000
             if constexpr (std::is_same_v<uint8_t, PixelT>)
             {
-                using T = rvv_traits<LMUL>;
+                using T = gaussian_rvv_traits<LMUL>;
                 const size_t vl  = T::setvl_e8(width - x);
                 auto sum = T::vmv0(vl);
 
@@ -231,7 +240,7 @@ template <typename PixelT = uint8_t, typename AccumulatorT = uint32_t, int LMUL 
  * @param   image The input image metadata, which will be modified in-place with the blurred output.
  * @return  Status indicating success or failure of the operation.
  */
-template <typename PixelT = uint8_t, typename AccumulatorT = uint32_t, int LMUL = 1>
+template <typename PixelT = uint8_t, typename AccumulatorT = uint32_t, int LMUL = 2>
 [[nodiscard]] Status separable_5x5(image::io::metadata_t<PixelT>& image)
 {
     if (!image.height || !image.width || !image.buffer)
@@ -261,7 +270,7 @@ template <typename PixelT = uint8_t, typename AccumulatorT = uint32_t, int LMUL 
 #if defined(__riscv_v) && __riscv_v >= 1000000
             if constexpr (std::is_same_v<uint8_t, PixelT>)
             {
-                using T = rvv_traits<LMUL>;
+                using T = gaussian_rvv_traits<LMUL>;
                 const size_t vl  = T::setvl_e8(pw - kernel_radius - x);
                 auto sum = T::vmv0(vl);
 
@@ -304,7 +313,7 @@ template <typename PixelT = uint8_t, typename AccumulatorT = uint32_t, int LMUL 
 #if defined(__riscv_v) && __riscv_v >= 1000000
             if constexpr (std::is_same_v<uint8_t, PixelT>)
             {
-                using T = rvv_traits<LMUL>;
+                using T = gaussian_rvv_traits<LMUL>;
                 const size_t vl  = T::setvl_e32(width - x);
                 auto sum = T::vmv0(vl);
 

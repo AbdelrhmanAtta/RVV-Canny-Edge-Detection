@@ -28,25 +28,26 @@ TARGET            := build/target/release/canny_rv.elf
 all: $(TARGET)
 
 # ── Main Pipeline Build ────────────────────────────────────────
+# NO -DTESTS here. This ensures `make run` uses production paths.
 $(TARGET): $(SRCS)
 	@mkdir -p ./build/target/release
 	$(RV_CXX) $(RV_CXXFLAGS_RVV) -O3 $(SRCS) -o $@ $(RV_LDFLAGS)
 
 # ── Functional Testing (QEMU) ─────────────────────────────────
 run: $(TARGET)
-	qemu-riscv64 -cpu max,vlen=512 $(TARGET)
+	qemu-riscv64 -cpu rv64,v=true,vlen=128,elen=64 $(TARGET)
 
 # Run standard tests on QEMU using RISC-V GoogleTest
 qemu-tests: tests/host_tests.cpp $(LIB_SRCS)
 	@mkdir -p ./build/target/debug
-	$(RV_CXX) $(RV_CXXFLAGS_RVV) -I$(GTEST_RV)/include -L$(GTEST_RV)/lib $^ -o build/target/debug/host_tests.elf $(RV_LDFLAGS) -lgtest -lgtest_main -pthread
+	$(RV_CXX) $(RV_CXXFLAGS_RVV) -DTESTS -I$(GTEST_RV)/include -L$(GTEST_RV)/lib $^ -o build/target/debug/host_tests.elf $(RV_LDFLAGS) -lgtest -lgtest_main -pthread
 	@echo "\n>>> Running Pipeline Tests on QEMU (VLEN=512)..."
 	qemu-riscv64 -cpu max,vlen=512 build/target/debug/host_tests.elf
 
 # Run Equivalence Tests to verify Vector-Length Agnostic (VLA) compliance
 vla-equiv: tests/equivalence_tests.cpp $(LIB_SRCS)
 	@mkdir -p ./build/target/debug
-	$(RV_CXX) $(RV_CXXFLAGS_RVV) -I$(GTEST_RV)/include -L$(GTEST_RV)/lib $^ -o build/target/debug/equivalence_tests.elf $(RV_LDFLAGS) -lgtest -lgtest_main -pthread
+	$(RV_CXX) $(RV_CXXFLAGS_RVV) -DTESTS -I$(GTEST_RV)/include -L$(GTEST_RV)/lib $^ -o build/target/debug/equivalence_tests.elf $(RV_LDFLAGS) -lgtest -lgtest_main -pthread
 	@echo "\n>>> Running Equivalence Tests with VLEN=128"
 	qemu-riscv64 -cpu max,vlen=128 build/target/debug/equivalence_tests.elf
 	@echo "\n>>> Running Equivalence Tests with VLEN=256"
@@ -64,41 +65,39 @@ gem5-run: build/target/debug/$(NAME).elf
 # ── Standard Host Testing ─────────────────────────────────────
 tests: tests/unit_tests.cpp $(LIB_SRCS)
 	@mkdir -p ./build/host/debug
-	$(HOST_CXX) -DHOST_MODE $^ $(HOST_CXXFLAGS) -o build/host/debug/unit_tests
+	$(HOST_CXX) -DHOST_MODE -DTESTS $^ $(HOST_CXXFLAGS) -o build/host/debug/unit_tests
 	./build/host/debug/unit_tests
 
 # ── RVV Benchmarks ───────────────────────────────────────────
-# -march=rv64gcv  → __riscv_v is defined → RVV paths active
 bench-rvv-O0: ./tests/benchmark.cpp $(LIB_SRCS)
 	@mkdir -p ./build/bench
-	$(RV_CXX) $(RV_CXXFLAGS_RVV) -O0 $^ -o build/bench/canny_rvv_O0.elf $(RV_LDFLAGS)
+	$(RV_CXX) $(RV_CXXFLAGS_RVV) -DTESTS -O0 $^ -o build/bench/canny_rvv_O0.elf $(RV_LDFLAGS)
 	$(GEM5_BIN) $(GEM5_SCRIPT) --cmd=build/bench/canny_rvv_O0.elf
 
 bench-rvv-O2: ./tests/benchmark.cpp $(LIB_SRCS)
 	@mkdir -p ./build/bench
-	$(RV_CXX) $(RV_CXXFLAGS_RVV) -O2 $^ -o build/bench/canny_rvv_O2.elf $(RV_LDFLAGS)
+	$(RV_CXX) $(RV_CXXFLAGS_RVV) -DTESTS -O2 $^ -o build/bench/canny_rvv_O2.elf $(RV_LDFLAGS)
 	$(GEM5_BIN) $(GEM5_SCRIPT) --cmd=build/bench/canny_rvv_O2.elf
 
 bench-rvv-O3: ./tests/benchmark.cpp $(LIB_SRCS)
 	@mkdir -p ./build/bench
-	$(RV_CXX) $(RV_CXXFLAGS_RVV) -O3 $^ -o build/bench/canny_rvv_O3.elf $(RV_LDFLAGS)
+	$(RV_CXX) $(RV_CXXFLAGS_RVV) -DTESTS -O3 $^ -o build/bench/canny_rvv_O3.elf $(RV_LDFLAGS)
 	$(GEM5_BIN) $(GEM5_SCRIPT) --cmd=build/bench/canny_rvv_O3.elf
 
 # ── Scalar Benchmarks ─────────────────────────────────────────
-# -march=rv64gc   → __riscv_v is NOT defined → scalar paths active
 bench-scalar-O0: ./tests/benchmark.cpp $(LIB_SRCS)
 	@mkdir -p ./build/bench
-	$(RV_CXX) $(RV_CXXFLAGS_SCALAR) -O0 $^ -o build/bench/canny_scalar_O0.elf $(RV_LDFLAGS)
+	$(RV_CXX) $(RV_CXXFLAGS_SCALAR) -DTESTS -O0 $^ -o build/bench/canny_scalar_O0.elf $(RV_LDFLAGS)
 	$(GEM5_BIN) $(GEM5_SCRIPT) --cmd=build/bench/canny_scalar_O0.elf
 
 bench-scalar-O2: ./tests/benchmark.cpp $(LIB_SRCS)
 	@mkdir -p ./build/bench
-	$(RV_CXX) $(RV_CXXFLAGS_SCALAR) -O2 $^ -o build/bench/canny_scalar_O2.elf $(RV_LDFLAGS)
+	$(RV_CXX) $(RV_CXXFLAGS_SCALAR) -DTESTS -O2 $^ -o build/bench/canny_scalar_O2.elf $(RV_LDFLAGS)
 	$(GEM5_BIN) $(GEM5_SCRIPT) --cmd=build/bench/canny_scalar_O2.elf
 
 bench-scalar-O3: ./tests/benchmark.cpp $(LIB_SRCS)
 	@mkdir -p ./build/bench
-	$(RV_CXX) $(RV_CXXFLAGS_SCALAR) -O3 $^ -o build/bench/canny_scalar_O3.elf $(RV_LDFLAGS)
+	$(RV_CXX) $(RV_CXXFLAGS_SCALAR) -DTESTS -O3 $^ -o build/bench/canny_scalar_O3.elf $(RV_LDFLAGS)
 	$(GEM5_BIN) $(GEM5_SCRIPT) --cmd=build/bench/canny_scalar_O3.elf
 
 # ── Convenience groups ────────────────────────────────────────
@@ -109,7 +108,7 @@ bench-all:    bench-rvv bench-scalar
 # ── Reporting ─────────────────────────────────────────────────
 autovec-report: ./tests/benchmark.cpp $(LIB_SRCS)
 	@mkdir -p ./build/bench ./results
-	$(RV_CXX) $(RV_CXXFLAGS_RVV) -O3 -fopt-info-vec-all $^ \
+	$(RV_CXX) $(RV_CXXFLAGS_RVV) -DTESTS -O3 -fopt-info-vec-all $^ \
 		-o build/bench/canny_autovec.elf $(RV_LDFLAGS) 2> results/autovec_report.txt
 	@echo "Saved to results/autovec_report.txt"
 
@@ -124,9 +123,8 @@ clean:
 # ── Generic debug elf builder ──────────────────────────────────
 build/target/debug/%.elf: tests/%.cpp $(LIB_SRCS)
 	@mkdir -p ./build/target/debug
-	$(RV_CXX) $(RV_CXXFLAGS_RVV) -O2 $^ -o $@ $(RV_LDFLAGS)
+	$(RV_CXX) $(RV_CXXFLAGS_RVV) -DTESTS -O2 $^ -o $@ $(RV_LDFLAGS)
 
-# Run any test by name: make run-tests NAME=sanity
 run-tests: build/target/debug/$(NAME).elf
 	$(GEM5_BIN) $(GEM5_SCRIPT) --cmd=$<
 

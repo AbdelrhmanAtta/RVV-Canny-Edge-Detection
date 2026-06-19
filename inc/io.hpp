@@ -52,7 +52,11 @@ template <typename PixelT = uint8_t>
     metadata.pixel_count = pixel_count;
     metadata.aligned_buffer_size = aligned_buffer_size;
 
+#if defined(TESTS)
+    std::filesystem::path file_path = std::filesystem::path("./tests_assets/") / file_name;
+#else
     std::filesystem::path file_path = std::filesystem::path("./assets/") / file_name;
+#endif
     std::ifstream file(file_path, std::ios::binary);
     
     if (!file) 
@@ -90,7 +94,11 @@ template <typename PixelT = uint8_t>
         return Status::E_NOK;
     }
 
+#if defined(TESTS)
+    std::filesystem::path file_path = std::filesystem::path("./tests_assets/") / file_name;
+#else
     std::filesystem::path file_path = std::filesystem::path("./assets/") / file_name;
+#endif
     std::ofstream file(file_path, std::ios::binary);
     if (!file)
     {

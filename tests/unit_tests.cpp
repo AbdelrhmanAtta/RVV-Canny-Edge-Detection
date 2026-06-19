@@ -310,5 +310,9 @@ TEST(CannyMagnitude, NonZeroOutput) {
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
+<<<<<<< HEAD
 }
 
+=======
+}
+>>>>>>> 04257a8 (added python script to scroll)
