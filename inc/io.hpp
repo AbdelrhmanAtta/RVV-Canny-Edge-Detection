@@ -10,18 +10,19 @@
 
 #include "std_types.hpp"
 #include "utils.hpp"
-#include <string_view>
+
 #include <cstdlib>
 #include <filesystem>
-#include <memory>
 #include <fstream>
+#include <string_view>
+
 
 namespace image::io
 {
 /**
  * @brief   Loads a raw binary file from disk into an aligned RAII buffer.
- * Allocates 64-byte aligned memory to satisfy RISC-V vector and cache line requirements.
- * Files are expected to be located in the `./assets/` directory.
+ *          Allocates 64-byte aligned memory to satisfy RISC-V vector and cache line requirements.
+ *          Files are expected to be located in the `./assets/` directory.
  * @tparam  PixelT              The pixel component type (e.g., uint8_t, uint16_t, float).
  * @param   file_name           Name of the raw file to load.
  * @param   metadata            Reference to the metadata struct to be populated.
@@ -34,7 +35,7 @@ template <typename PixelT = uint8_t>
     const size_t pixel_count = static_cast<size_t>(metadata.width) * metadata.height;
     const size_t total_bytes = pixel_count * sizeof(PixelT);
     const size_t aligned_buffer_size = utils::memory::align_64(total_bytes);
-
+    
     if(!pixel_count)
     {
         return Status::E_NOK;

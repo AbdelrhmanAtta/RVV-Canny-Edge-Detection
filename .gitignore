@@ -45,6 +45,17 @@ html/
 latex/
 .venv/
 *.json
-assets/*_output.raw
-assets/rect_*.raw
+
+# Crash Dumps
+*.core
+
+# Target Executables
+*.elf
+
+# Simulator & Test Outputs
+m5out/
+
+# Generated Documentation (if generated inside a docs directory)
+docs/html/
+docs/latex/
 

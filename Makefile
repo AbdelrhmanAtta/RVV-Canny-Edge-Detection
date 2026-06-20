@@ -2,7 +2,7 @@
 HOST_CXX          := g++
 RV_CXX            := riscv64-linux-gnu-g++
 GEM5_BIN          := $(HOME)/gem5/build/RISCV/gem5.opt
-GEM5_SCRIPT       := run_gem5.py
+GEM5_SCRIPT       := ./tools/run_gem5.py
 GTEST             := $(HOME)/googletest-installed
 GTEST_RV          := $(HOME)/googletest-riscv
 GEM5_INCLUDE      := $(HOME)/gem5/include
