@@ -6,14 +6,10 @@
 #pragma once
 
 #include <concepts>
-#include <cstdint>
 #include <cstdlib>
 
 namespace utils::memory
 {
-/**
- * @brief   Struct-like function object for aligned memory deallocation.
- */
 struct deleter
 {
     void operator()(void* ptr) const noexcept
@@ -31,9 +27,8 @@ struct deleter
 inline void* aligned_alloc(size_t alignment, size_t size) noexcept
 {
     size_t remainder = size % alignment;
-    if (remainder != 0) {
+    if (remainder != 0)
         size += (alignment - remainder);
-    }
     return std::aligned_alloc(alignment, size);
 }
 

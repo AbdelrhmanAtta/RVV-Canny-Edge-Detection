@@ -5,15 +5,15 @@
     #include <cmath>
     #include <algorithm>
 
-    #include "../inc/std_types.hpp"
-    #include "../inc/utils.hpp"
-    #include "../inc/io.hpp"
-    #include "../inc/gaussian.hpp"
-    #include "../inc/sobel.hpp"
-    #include "../inc/gradient.hpp"
-    #include "../inc/nonmaximum_suppression.hpp" 
-    #include "../inc/double_thresholding.hpp"
-    #include "../inc/hysteresis_tracking.hpp"    
+    #include "std_types.hpp"
+    #include "utils.hpp"
+    #include "io.hpp"
+    #include "gaussian.hpp"
+    #include "sobel.hpp"
+    #include "gradient.hpp"
+    #include "nms.hpp" 
+    #include "double_thresholding.hpp"
+    #include "hysteresis.hpp"    
 
     struct ImageTask { std::string filename; uint32_t width; uint32_t height; };
 
@@ -58,35 +58,35 @@
             if (image::io::load_raw<uint8_t>(task.filename, img) != Status::E_OK) continue;
 
             // 1. Gaussian Blur
-            processing::separable_5x5(img);
+            processing::gaussian::separable_5x5(img);
             image::io::save_raw<uint8_t>("blur_" + task.filename, img);
 
             // 2. Sobel Gradients
             auto gx = allocate_image<int16_t>(task.width, task.height);
             auto gy = allocate_image<int16_t>(task.width, task.height);
-            processing::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
+            processing::sobel::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
             save_normalized("gx_" + task.filename, gx.buffer.get(), task.width, task.height);
             save_normalized("gy_" + task.filename, gy.buffer.get(), task.width, task.height);
 
             // 3. Magnitude & Direction
             auto mag = allocate_image<uint8_t>(task.width, task.height);
             auto dir = allocate_image<uint8_t>(task.width, task.height);
-            processing::l1(mag, gx.buffer.get(), gy.buffer.get());
-            processing::direction(dir, gx.buffer.get(), gy.buffer.get());
+            processing::gradient::l1(mag, gx.buffer.get(), gy.buffer.get());
+            processing::gradient::direction(dir, gx.buffer.get(), gy.buffer.get());
             image::io::save_raw<uint8_t>("mag_" + task.filename, mag);
             image::io::save_raw<uint8_t>("dir_" + task.filename, dir);
 
             // 4. Non-Maximum Suppression
             auto nms = allocate_image<uint8_t>(task.width, task.height);
-            processing::nms(mag, dir, nms);
+            processing::nms::mag(mag, dir, nms);
             image::io::save_raw<uint8_t>("nms_" + task.filename, nms);
 
             // 5. Double Thresholding
-            processing::double_thresholding(nms, LOW, HIGH);
+            processing::double_thresholding::mag(nms, LOW, HIGH);
             image::io::save_raw<uint8_t>("thresh_" + task.filename, nms);
 
             // 6. Hysteresis Tracking
-            processing::hysteresis(nms, LOW, HIGH);
+            processing::hysteresis::mag(nms, LOW, HIGH);
             image::io::save_raw<uint8_t>("canny_" + task.filename, nms);
             
             std::cout << "  -> Success: All stages saved for " << task.filename << "\n";

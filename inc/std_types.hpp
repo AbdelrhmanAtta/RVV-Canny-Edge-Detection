@@ -6,25 +6,28 @@
 #pragma once
 
 #include "utils.hpp"
+
 #include <cstddef>
 #include <memory>
 #include <cstdint>
-#include <expected>
 
 
 /**
  * @enum Status
  * @brief Represents the execution result of a function.
- *
- * Used to indicate whether an operation succeeded or failed.
+ * E_OK: Operation completed successfully.
+ * E_NOK: Operation failed due to a non-specific error.
+ * E_INVAL_PTR: Operation failed due to an invalid pointer argument.
+ * E_ALLOC_FAIL: Operation failed due to memory allocation failure.
+ * E_INVAL_DIR: Operation failed due to an invalid direction argument.
  */
 enum class Status : uint8_t
 {
-    E_OK  = 0,              /**< Operation completed successfully */
-    E_NOK = 1,              /**< Operation failed */
-    E_INVAL_PTR,            /**< Invalid Pointer */
-    E_ALLOC_FAIL,           /**< Memory Allocation Failure */
-    E_INVAL_DIR,            /**< Invalid Direction */
+    E_OK  = 0,
+    E_NOK = 1,
+    E_INVAL_PTR,
+    E_ALLOC_FAIL,
+    E_INVAL_DIR,
 };
 
 namespace image::io
@@ -36,7 +39,6 @@ namespace image::io
 template <typename PixelT = uint8_t>
 struct metadata_t
 {
-    /** @brief RAII pointer to 64-byte aligned pixel data. */
     std::unique_ptr<PixelT[], utils::memory::deleter> buffer;
     uint32_t width;
     uint32_t height;

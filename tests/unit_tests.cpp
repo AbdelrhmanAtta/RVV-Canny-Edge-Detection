@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -7,19 +6,19 @@
 #include <cmath>
 #include <utility>
 
-#include "../inc/utils.hpp"
-#include "../inc/std_types.hpp"
-#include "../inc/io.hpp"
-#include "../inc/gaussian.hpp"
-#include "../inc/sobel.hpp"
-#include "../inc/gradient.hpp"
-// Include the new headers for the rest of the pipeline
-#include "../inc/nonmaximum_suppression.hpp" 
-#include "../inc/double_thresholding.hpp"
-#include "../inc/hysteresis_tracking.hpp"
+#include "utils.hpp"
+#include "std_types.hpp"
+#include "io.hpp"
+#include "gaussian.hpp"
+#include "sobel.hpp"
+#include "gradient.hpp"
+#include "nms.hpp" 
+#include "double_thresholding.hpp"
+#include "hysteresis.hpp"
 
 template <typename T>
-image::io::metadata_t<T> allocate_image(uint32_t w, uint32_t h) {
+image::io::metadata_t<T> allocate_image(uint32_t w, uint32_t h) 
+{
     image::io::metadata_t<T> img;
     img.width = w;
     img.height = h;
@@ -30,7 +29,8 @@ image::io::metadata_t<T> allocate_image(uint32_t w, uint32_t h) {
     return img;
 }
 
-TEST(CannyPipeline, ProcessAndSaveAllImages) {
+TEST (CannyPipeline, ProcessAndSaveAllImages) 
+{
     std::vector<std::string> bases = {
         "circ", "diag", "diag_inv", "full_black", "full_white", 
         "half_bw", "horiz", "quad_bw", "rect", "vert"
@@ -41,11 +41,9 @@ TEST(CannyPipeline, ProcessAndSaveAllImages) {
 
     for(const auto& base : bases) {
         for(const auto& [w, h] : dims) {
-            // src: Original input file (e.g., circ512x512.raw)
             std::string base_name = base + std::to_string(w) + "x" + std::to_string(h);
             std::string src = base_name + ".raw";
             
-            // prefix: Used for saving generated stages (e.g., google_circ512x512)
             std::string prefix = "google_" + base_name; 
 
             auto img_orig = allocate_image<uint8_t>(w, h);
@@ -53,54 +51,46 @@ TEST(CannyPipeline, ProcessAndSaveAllImages) {
                 continue;
             }
 
-            // 1. Spatial Gaussian
             auto img_spatial = allocate_image<uint8_t>(w, h);
             std::memcpy(img_spatial.buffer.get(), img_orig.buffer.get(), img_orig.pixel_count);
-            EXPECT_EQ(processing::spatial_5x5(img_spatial), Status::E_OK);
+            EXPECT_EQ(processing::gaussian::spatial_5x5(img_spatial), Status::E_OK);
             EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_spatial.raw", img_spatial), Status::E_OK);
 
-            // 2. Separable Gaussian (Saved as _sep.raw to match viewer)
             auto img_separable = allocate_image<uint8_t>(w, h);
             std::memcpy(img_separable.buffer.get(), img_orig.buffer.get(), img_orig.pixel_count);
-            EXPECT_EQ(processing::separable_5x5(img_separable), Status::E_OK);
+            EXPECT_EQ(processing::gaussian::separable_5x5(img_separable), Status::E_OK);
             EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_sep.raw", img_separable), Status::E_OK);
 
-            // 3. Sobel Gradients
             auto gx = allocate_image<int16_t>(w, h);
             auto gy = allocate_image<int16_t>(w, h);
-            EXPECT_EQ(processing::spatial_3x3(img_separable, gx.buffer.get(), gy.buffer.get()), Status::E_OK);
+            EXPECT_EQ(processing::sobel::spatial_3x3(img_separable, gx.buffer.get(), gy.buffer.get()), Status::E_OK);
             EXPECT_EQ(image::io::save_raw<int16_t>(prefix + "_gx.raw", gx), Status::E_OK);
             EXPECT_EQ(image::io::save_raw<int16_t>(prefix + "_gy.raw", gy), Status::E_OK);
 
-            // 4. Magnitudes (Saved as _mag1.raw and _mag2.raw to match viewer)
             auto mag_l1 = allocate_image<uint8_t>(w, h);
-            EXPECT_EQ(processing::l1(mag_l1, gx.buffer.get(), gy.buffer.get()), Status::E_OK);
+            EXPECT_EQ(processing::gradient::l1(mag_l1, gx.buffer.get(), gy.buffer.get()), Status::E_OK);
             EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_mag1.raw", mag_l1), Status::E_OK);
 
             auto mag_l2 = allocate_image<uint8_t>(w, h);
-            EXPECT_EQ(processing::l2(mag_l2, gx.buffer.get(), gy.buffer.get()), Status::E_OK);
+            EXPECT_EQ(processing::gradient::l2(mag_l2, gx.buffer.get(), gy.buffer.get()), Status::E_OK);
             EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_mag2.raw", mag_l2), Status::E_OK);
 
-            // 5. Direction
             auto dir = allocate_image<uint8_t>(w, h);
-            EXPECT_EQ(processing::direction(dir, gx.buffer.get(), gy.buffer.get()), Status::E_OK);
+            EXPECT_EQ(processing::gradient::direction(dir, gx.buffer.get(), gy.buffer.get()), Status::E_OK);
             EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_dir.raw", dir), Status::E_OK);
 
-            // 6. Non-Maximum Suppression (Using mag_l2 as the standard)
             auto nms_out = allocate_image<uint8_t>(w, h);
-            EXPECT_EQ(processing::nms(mag_l2, dir, nms_out), Status::E_OK);
+            EXPECT_EQ(processing::nms::mag(mag_l2, dir, nms_out), Status::E_OK);
             EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_nms.raw", nms_out), Status::E_OK);
 
-            // 7. Double Thresholding
             auto double_thresh_out = allocate_image<uint8_t>(w, h);
             std::memcpy(double_thresh_out.buffer.get(), nms_out.buffer.get(), nms_out.pixel_count);
-            EXPECT_EQ(processing::double_thresholding(double_thresh_out, static_cast<uint8_t>(20), static_cast<uint8_t>(60)), Status::E_OK);
+            EXPECT_EQ(processing::double_thresholding::mag(double_thresh_out, static_cast<uint8_t>(20), static_cast<uint8_t>(60)), Status::E_OK);
             EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_double_thresholding.raw", double_thresh_out), Status::E_OK);
 
-            // 8. Hysteresis
             auto hysteresis_out = allocate_image<uint8_t>(w, h);
             std::memcpy(hysteresis_out.buffer.get(), nms_out.buffer.get(), nms_out.pixel_count);
-            EXPECT_EQ(processing::hysteresis(hysteresis_out, static_cast<uint8_t>(20), static_cast<uint8_t>(60)), Status::E_OK);
+            EXPECT_EQ(processing::hysteresis::mag(hysteresis_out, static_cast<uint8_t>(20), static_cast<uint8_t>(60)), Status::E_OK);
             EXPECT_EQ(image::io::save_raw<uint8_t>(prefix + "_hysteresis.raw", hysteresis_out), Status::E_OK);
         }
     }
@@ -111,7 +101,7 @@ TEST(CannyGaussian, UniformImage) {
     auto img = allocate_image<uint8_t>(dim, dim);
     std::memset(img.buffer.get(), 128, img.pixel_count);
 
-    Status stat = processing::separable_5x5(img);
+    Status stat = processing::gaussian::separable_5x5(img);
     EXPECT_EQ(stat, Status::E_OK);
 
     const uint8_t expected_val = 135;
@@ -129,7 +119,7 @@ TEST(CannyGaussian, AllBlackImage) {
     auto img = allocate_image<uint8_t>(dim, dim);
     std::memset(img.buffer.get(), 0, img.pixel_count);
 
-    Status stat = processing::separable_5x5(img);
+    Status stat = processing::gaussian::separable_5x5(img);
     EXPECT_EQ(stat, Status::E_OK);
 
     for (size_t i = 0; i < img.pixel_count; ++i) {
@@ -146,7 +136,7 @@ TEST(CannyGaussian, ImpulseSymmetry) {
     const uint32_t cy = dim / 2;
     img.buffer.get()[cy * dim + cx] = 255;
 
-    Status stat = processing::separable_5x5(img);
+    Status stat = processing::gaussian::separable_5x5(img);
     EXPECT_EQ(stat, Status::E_OK);
 
     uint8_t* ptr = img.buffer.get();
@@ -166,7 +156,7 @@ TEST(CannySobel, UniformImage) {
     
     std::memset(img.buffer.get(), 128, img.pixel_count);
 
-    Status stat = processing::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
+    Status stat = processing::sobel::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
     EXPECT_EQ(stat, Status::E_OK);
 
     for (uint32_t y = 1; y < dim - 1; ++y) {
@@ -190,7 +180,7 @@ TEST(CannySobel, VerticalEdge) {
         }
     }
 
-    Status stat = processing::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
+    Status stat = processing::sobel::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
     EXPECT_EQ(stat, Status::E_OK);
 
     const uint32_t edge_x = dim / 2;
@@ -213,7 +203,7 @@ TEST(CannySobel, HorizontalEdge) {
         }
     }
 
-    Status stat = processing::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
+    Status stat = processing::sobel::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
     EXPECT_EQ(stat, Status::E_OK);
 
     const uint32_t edge_y = dim / 2;
@@ -236,7 +226,7 @@ TEST(CannySobel, DiagonalEdge) {
         }
     }
 
-    Status stat = processing::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
+    Status stat = processing::sobel::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
     EXPECT_EQ(stat, Status::E_OK);
 
     for (uint32_t i = 1; i < dim - 1; ++i) {
@@ -261,7 +251,7 @@ TEST(CannyDirection, EdgeAngles) {
     gx.buffer.get()[2] = 255; 
     gy.buffer.get()[2] = 255;
 
-    Status stat = processing::direction(dir, gx.buffer.get(), gy.buffer.get());
+    Status stat = processing::gradient::direction(dir, gx.buffer.get(), gy.buffer.get());
     EXPECT_EQ(stat, Status::E_OK);
 
     EXPECT_EQ(dir.buffer.get()[0], 0);
@@ -280,7 +270,7 @@ TEST(CannyMagnitude, NonZeroOutput) {
         gy.buffer.get()[i] = ((i * 3) % 512) - 256;
     }
 
-    Status stat_l1 = processing::l1(mag, gx.buffer.get(), gy.buffer.get());
+    Status stat_l1 = processing::gradient::l1(mag, gx.buffer.get(), gy.buffer.get());
     EXPECT_EQ(stat_l1, Status::E_OK);
     
     bool has_nonzero_l1 = false;
@@ -294,7 +284,7 @@ TEST(CannyMagnitude, NonZeroOutput) {
 
     std::memset(mag.buffer.get(), 0, mag.pixel_count);
 
-    Status stat_l2 = processing::l2(mag, gx.buffer.get(), gy.buffer.get());
+    Status stat_l2 = processing::gradient::l2(mag, gx.buffer.get(), gy.buffer.get());
     EXPECT_EQ(stat_l2, Status::E_OK);
     
     bool has_nonzero_l2 = false;
@@ -311,4 +301,3 @@ int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
-
