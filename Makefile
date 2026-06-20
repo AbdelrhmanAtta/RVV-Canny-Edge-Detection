@@ -133,4 +133,3 @@ autovec-report: $(TARGET)
 .PHONY: clean
 clean:
 	rm -rf build/* m5out/ results/
-	
