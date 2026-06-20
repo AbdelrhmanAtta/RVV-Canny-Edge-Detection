@@ -1,4 +1,8 @@
 # ============================================================================
+# RVV Canny Edge Detection — Build System
+# ============================================================================
+
+# ============================================================================
 # Toolchain & Paths
 # ============================================================================
 HOST_CXX          := g++
@@ -13,29 +17,34 @@ GEM5_LIB          := $(HOME)/gem5/util/m5/build/riscv/out
 # ============================================================================
 # Compiler Flags
 # ============================================================================
-RV_CXXFLAGS_BASE  := -std=c++23 -static -Iinc -DGEM5_MODE -I$(GEM5_INCLUDE)
-RV_CXXFLAGS_RVV   := $(RV_CXXFLAGS_BASE) -march=rv64gcv
-RV_CXXFLAGS_SCALAR:= $(RV_CXXFLAGS_BASE) -march=rv64gc
-RV_LDFLAGS        := -L$(GEM5_LIB) -lm5
+RV_CXXFLAGS_BASE   := -std=c++23 -static -Iinc -DGEM5_MODE -I$(GEM5_INCLUDE)
+RV_CXXFLAGS_RVV    := $(RV_CXXFLAGS_BASE) -march=rv64gcv
+RV_CXXFLAGS_SCALAR := $(RV_CXXFLAGS_BASE) -march=rv64gc
+RV_LDFLAGS         := -L$(GEM5_LIB) -lm5
 
-HOST_CXXFLAGS     := -std=c++23 -Iinc -I$(GTEST)/include -L$(GTEST)/lib -lgtest -lgtest_main -pthread
+HOST_CXXFLAGS      := -std=c++23 -Iinc -I$(GTEST)/include -L$(GTEST)/lib -lgtest -lgtest_main -pthread
 
 # ============================================================================
 # Source Files
 # ============================================================================
-SRCS              := $(wildcard src/*.cpp)
-LIB_SRCS          := $(filter-out src/main.cpp, $(SRCS))
+SRCS     := $(wildcard src/*.cpp)
+LIB_SRCS := $(filter-out src/main.cpp, $(SRCS))
 
 # ============================================================================
 # Main Target (production ELF)
 # ============================================================================
-TARGET            := build/target/release/canny_rv.elf
+TARGET := build/target/release/canny_rv.elf
+
 .PHONY: all
 all: $(TARGET)
 
 $(TARGET): $(SRCS)
-	@mkdir -p ./build/target/release
+	@mkdir -p build/target/release
 	$(RV_CXX) $(RV_CXXFLAGS_RVV) -O3 $(SRCS) -o $@ $(RV_LDFLAGS)
+
+# Friendly alias documented in the README (`make canny_rv`)
+.PHONY: canny_rv
+canny_rv: $(TARGET)
 
 # ============================================================================
 # Running on QEMU (functional test)
@@ -45,14 +54,15 @@ run: $(TARGET)
 	qemu-riscv64 -cpu rv64,v=true,vlen=128,elen=64 $(TARGET)
 
 # ============================================================================
-# GoogleTest Unit Tests (QEMU)
+# GoogleTest Unit Tests (QEMU, target-side RVV equivalence)
 # ============================================================================
 QEMU_TEST_ELF := build/target/debug/qemu_tests.elf
 
 .PHONY: qemu-tests
 qemu-tests: tests/qemu_tests.cpp $(LIB_SRCS)
-	@mkdir -p ./build/target/debug
-	$(RV_CXX) $(RV_CXXFLAGS_RVV) -DTESTS -I$(GTEST_RV)/include -L$(GTEST_RV)/lib $^ -o $(QEMU_TEST_ELF) $(RV_LDFLAGS) -lgtest -lgtest_main -pthread
+	@mkdir -p build/target/debug
+	$(RV_CXX) $(RV_CXXFLAGS_RVV) -DTESTS -I$(GTEST_RV)/include -L$(GTEST_RV)/lib $^ \
+		-o $(QEMU_TEST_ELF) $(RV_LDFLAGS) -lgtest -lgtest_main -pthread
 	@echo "\n>>> Running Pipeline Tests on QEMU (VLEN=128)..."
 	qemu-riscv64 -cpu max,vlen=128 $(QEMU_TEST_ELF) || exit 1
 	@echo "\n>>> Running Pipeline Tests on QEMU (VLEN=256)..."
@@ -66,15 +76,19 @@ qemu-tests: tests/qemu_tests.cpp $(LIB_SRCS)
 # ============================================================================
 .PHONY: tests
 tests: tests/unit_tests.cpp $(LIB_SRCS)
-	@mkdir -p ./build/host/debug
+	@mkdir -p build/host/debug
 	$(HOST_CXX) -DHOST_MODE -DTESTS $^ $(HOST_CXXFLAGS) -o build/host/debug/unit_tests
 	./build/host/debug/unit_tests
+
+# Friendly alias documented in the README (`make test`)
+.PHONY: test
+test: tests
 
 # ============================================================================
 # Benchmarking (gem5) – grouped by optimisation level
 # ============================================================================
-BENCH_SRC := ./tests/benchmark.cpp
-BENCH_DIR := ./build/bench
+BENCH_SRC := tests/benchmark.cpp
+BENCH_DIR := build/bench
 
 # Pattern for RVV benchmarks: bench-rvv-<OPT>
 .PHONY: bench-rvv-%
@@ -105,10 +119,21 @@ gem5-run: build/target/debug/$(NAME).elf
 	$(GEM5_BIN) $(GEM5_SCRIPT) --cmd=$<
 	@echo "Simulation complete. Check m5out/stats.txt for accurate cycles."
 
+# Friendly alias documented in the README (`make run-test NAME=x`)
+.PHONY: run-test
+run-test: gem5-run
+
 # Pattern to build any test ELF (e.g., make build/target/debug/foo.elf)
 build/target/debug/%.elf: tests/%.cpp $(LIB_SRCS)
-	@mkdir -p ./build/target/debug
+	@mkdir -p build/target/debug
 	$(RV_CXX) $(RV_CXXFLAGS_RVV) -DTESTS -O2 $^ -o $@ $(RV_LDFLAGS)
+
+# ============================================================================
+# Documentation
+# ============================================================================
+.PHONY: docs
+docs:
+	doxygen Doxyfile
 
 # ============================================================================
 # Utility / Info
