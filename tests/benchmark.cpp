@@ -38,9 +38,6 @@
 #include <gem5/m5ops.h>
 #define GEM5_RESET_STATS() m5_reset_stats(0, 0)
 #define GEM5_DUMP_STATS()  m5_dump_stats(0, 0)
-#else
-#define GEM5_RESET_STATS() do {} while(0)
-#define GEM5_DUMP_STATS()  do {} while(0)
 #endif
 
 static double elapsed_ms(struct timespec s, struct timespec e)
