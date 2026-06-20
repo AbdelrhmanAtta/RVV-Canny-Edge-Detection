@@ -38,22 +38,27 @@ run: $(TARGET)
 	qemu-riscv64 -cpu rv64,v=true,vlen=128,elen=64 $(TARGET)
 
 # Run standard tests on QEMU using RISC-V GoogleTest
-qemu-tests: tests/host_tests.cpp $(LIB_SRCS)
+qemu-tests: tests/qemu_tests.cpp $(LIB_SRCS)
 	@mkdir -p ./build/target/debug
-	$(RV_CXX) $(RV_CXXFLAGS_RVV) -DTESTS -I$(GTEST_RV)/include -L$(GTEST_RV)/lib $^ -o build/target/debug/host_tests.elf $(RV_LDFLAGS) -lgtest -lgtest_main -pthread
+	$(RV_CXX) $(RV_CXXFLAGS_RVV) -DTESTS -I$(GTEST_RV)/include -L$(GTEST_RV)/lib $^ -o build/target/debug/qemu_tests.elf $(RV_LDFLAGS) -lgtest -lgtest_main -pthread
+	@echo "\n>>> Running Pipeline Tests on QEMU (VLEN=128)..."
+	qemu-riscv64 -cpu max,vlen=128 build/target/debug/qemu_tests.elf || exit 1
+	@echo "\n>>> Running Pipeline Tests on QEMU (VLEN=256)..."
+	qemu-riscv64 -cpu max,vlen=256 build/target/debug/qemu_tests.elf || exit 1
 	@echo "\n>>> Running Pipeline Tests on QEMU (VLEN=512)..."
-	qemu-riscv64 -cpu max,vlen=512 build/target/debug/host_tests.elf
+	qemu-riscv64 -cpu max,vlen=512 build/target/debug/qemu_tests.elf || exit 1
+	@echo "\nAll VLEN tests passed."
 
 # Run Equivalence Tests to verify Vector-Length Agnostic (VLA) compliance
-vla-equiv: tests/host_tests.cpp $(LIB_SRCS)
+vla-equiv: tests/qemu_tests.cpp $(LIB_SRCS)
 	@mkdir -p ./build/target/debug
-	$(RV_CXX) $(RV_CXXFLAGS_RVV) -DTESTS -I$(GTEST_RV)/include -L$(GTEST_RV)/lib $^ -o build/target/debug/host_tests.elf $(RV_LDFLAGS) -lgtest -lgtest_main -pthread
+	$(RV_CXX) $(RV_CXXFLAGS_RVV) -DTESTS -I$(GTEST_RV)/include -L$(GTEST_RV)/lib $^ -o build/target/debug/qemu_tests.elf $(RV_LDFLAGS) -lgtest -lgtest_main -pthread
 	@echo "\n>>> Running Equivalence Tests with VLEN=128"
-	qemu-riscv64 -cpu max,vlen=128 build/target/debug/host_tests.elf
+	qemu-riscv64 -cpu max,vlen=128 build/target/debug/qemu_tests.elf
 	@echo "\n>>> Running Equivalence Tests with VLEN=256"
-	qemu-riscv64 -cpu max,vlen=256 build/target/debug/host_tests.elf
+	qemu-riscv64 -cpu max,vlen=256 build/target/debug/qemu_tests.elf
 	@echo "\n>>> Running Equivalence Tests with VLEN=512"
-	qemu-riscv64 -cpu max,vlen=512 build/target/debug/host_tests.elf
+	qemu-riscv64 -cpu max,vlen=512 build/target/debug/qemu_tests.elf
 
 # Architectural Profiling (gem5)
 # Usage: make gem5-run NAME=your_test
@@ -99,6 +104,16 @@ bench-scalar-O3: ./tests/benchmark.cpp $(LIB_SRCS)
 	@mkdir -p ./build/bench
 	$(RV_CXX) $(RV_CXXFLAGS_SCALAR) -DTESTS -O3 $^ -o build/bench/canny_scalar_O3.elf $(RV_LDFLAGS)
 	$(GEM5_BIN) $(GEM5_SCRIPT) --cmd=build/bench/canny_scalar_O3.elf
+
+bench-scalar-Ofast: ./tests/benchmark.cpp $(LIB_SRCS)
+	@mkdir -p ./build/bench
+	$(RV_CXX) $(RV_CXXFLAGS_SCALAR) -DTESTS -Ofast $^ -o build/bench/canny_scalar_Ofast.elf $(RV_LDFLAGS)
+	$(GEM5_BIN) $(GEM5_SCRIPT) --cmd=build/bench/canny_scalar_Ofast.elf
+
+bench-scalar-Os: ./tests/benchmark.cpp $(LIB_SRCS)
+	@mkdir -p ./build/bench
+	$(RV_CXX) $(RV_CXXFLAGS_SCALAR) -DTESTS -Os $^ -o build/bench/canny_scalar_Os.elf $(RV_LDFLAGS)
+	$(GEM5_BIN) $(GEM5_SCRIPT) --cmd=build/bench/canny_scalar_Os.elf
 
 # Convenience groups
 bench-rvv:    bench-rvv-O0    bench-rvv-O2    bench-rvv-O3

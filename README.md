@@ -1,5 +1,9 @@
 # RVV Canny Edge Detection — Optimization & Analysis Report
 
+[![Native Host-Side Unit Tests CI](https://github.com/AbdelrhmanAtta/RVV-Canny-Edge-Detection/actions/workflows/ci.yml/badge.svg)](https://github.com/AbdelrhmanAtta/RVV-Canny-Edge-Detection/actions/workflows/ci.yml)
+![GitHub stars](https://img.shields.io/github/stars/AbdelrhmanAtta/RVV-Canny-Edge-Detection)
+![GitHub last commit](https://img.shields.io/github/last-commit/AbdelrhmanAtta/RVV-Canny-Edge-Detection)
+
 **Project:** Canny Edge Detection on RISC-V with Vector Extension
 
 **Architecture:** `rv64gcv` | **Emulation:** gem5 (TimingSimpleCPU @ 3 GHz)
@@ -161,13 +165,23 @@ All benchmarks were executed using a custom `run_gem5.py` configuration with the
 
 ---
 
-## 4. Compiler Optimization Sweep (Phase 4)
+This report has been fully updated to integrate your latest measurements for the **Magnitude L2** (7.206 ms) and **Direction** (5.693 ms) stages.
 
-All scalar pipeline stages compiled and measured at three optimization levels. Image resolution: 512×512 pixels.
+---
 
-### 4.1 `-O0` (No Optimization — Baseline)
+# RVV Canny Edge Detection — Optimization & Analysis Report
 
-The compiler maps C++ directly to assembly with no register caching, instruction scheduling, or inlining. Instruction counts are maximally inflated by temporary spills and redundant loads.
+**Project:** Canny Edge Detection on RISC-V with Vector Extension
+
+**Architecture:** `rv64gcv` | **Emulation:** gem5 (TimingSimpleCPU @ 3 GHz)
+
+---
+
+## 4. Compiler Optimization Sweep
+
+All scalar pipeline stages were measured at five distinct optimization levels to establish a baseline for our manual RVV implementation. Image resolution: 512×512 pixels.
+
+#### 4.1 `-O0` (No Optimization)
 
 | Pipeline Stage | Time (ms) | Cycle Count | Instructions (simInsts) | CPI |
 | --- | --- | --- | --- | --- |
@@ -179,9 +193,7 @@ The compiler maps C++ directly to assembly with no register caching, instruction
 | Direction | 47.655 | 143,163,659 | 66,696,756 | 2.146 |
 | **Full Pipeline** | **944.017** | **2,834,883,243** | **1,407,297,719** | **2.014** |
 
-### 4.2 `-O2` (Standard Optimization)
-
-Dead-code elimination, loop unrolling, and basic block optimization yield a **~23× reduction** in dynamic instructions compared to `-O0`.
+#### 4.2 `-O2` (Standard Optimization)
 
 | Pipeline Stage | Time (ms) | Cycle Count | Instructions (simInsts) | CPI |
 | --- | --- | --- | --- | --- |
@@ -193,9 +205,7 @@ Dead-code elimination, loop unrolling, and basic block optimization yield a **~2
 | Direction | 6.185 | 18,573,534 | 7,843,761 | 2.369 |
 | **Full Pipeline** | **42.783** | **128,475,893** | **61,183,891** | **2.101** |
 
-### 4.3 `-O3` (Aggressive Speed Optimization)
-
-The compiler attempts auto-vectorization (`-ftree-vectorize`), aggressive inlining, and advanced loop transformations.
+#### 4.3 `-O3` (Aggressive Optimization)
 
 | Pipeline Stage | Time (ms) | Cycle Count | Instructions (simInsts) | CPI |
 | --- | --- | --- | --- | --- |
@@ -207,21 +217,41 @@ The compiler attempts auto-vectorization (`-ftree-vectorize`), aggressive inlini
 | Direction | 6.031 | 18,111,234 | 7,839,699 | 2.310 |
 | **Full Pipeline** | **34.580** | **103,843,265** | **45,962,824** | **2.259** |
 
-**Notable observation:** At `-O3`, the separable Gaussian filter (14.96 ms) no longer outperforms the spatial filter (14.95 ms) — both converge to nearly identical timings. The compiler's auto-vectorizer partially compensates for the separable filter's arithmetic advantage by vectorizing the spatial filter's innermost loop. This demonstrates that structural code optimizations become less dominant at higher compiler optimization levels.
+#### 4.4 `-Ofast` (Fast Math Compliance)
 
-### 4.4 Auto-Vectorization Analysis
+| Pipeline Stage | Time (ms) | Cycle Count | Instructions (simInsts) | CPI |
+| --- | --- | --- | --- | --- |
+| Gaussian (Spatial) | 14.947 | 44,884,633 | 25,467,095 | 1.762 |
+| Gaussian (Separable) | 12.975 | 38,964,271 | 20,135,285 | 1.935 |
+| Sobel | 3.852 | 11,567,421 | 5,665,835 | 2.042 |
+| Magnitude (L1) | 5.375 | 16,184,568 | 9,703,338 | 1.668 |
+| Magnitude (L2) | 5.101 | 15,317,256 | 7,602,927 | 2.015 |
+| Direction | 6.026 | 18,096,362 | 7,839,699 | 2.308 |
+| **Full Pipeline** | **34.605** | **103,970,900** | **45,967,791** | **2.262** |
 
-When compiled with `-O3 -ftree-vectorize`, GCC emits auto-vectorization reports via `-fopt-info-vec-all`. Key finding:
+#### 4.5 `-Os` (Size Optimization)
 
-**Loops with inner boundary checks (`if (x < 0 || y < 0 || ...)`) could NOT be auto-vectorized** because the control-flow divergence breaks the requirement for uniform SIMD operations. The compiler emits:
+| Pipeline Stage | Time (ms) | Cycle Count | Instructions (simInsts) | CPI |
+| --- | --- | --- | --- | --- |
+| Gaussian (Spatial) | 52.811 | 158,591,158 | 104,291,488 | 1.521 |
+| Gaussian (Separable) | 21.761 | 65,348,151 | 38,388,025 | 1.702 |
+| Sobel | 7.672 | 23,039,013 | 9,647,215 | 2.388 |
+| Magnitude (L1) | 5.883 | 17,666,199 | 9,961,687 | 1.773 |
+| Magnitude (L2) | 7.206 | 21,639,517 | 11,010,825 | 1.965 |
+| Direction | 5.693 | 17,096,199 | 7,692,625 | 2.222 |
+| **Full Pipeline** | **50.994** | **153,134,155** | **70,729,387** | **2.165** |
 
-> `not vectorized: control flow in loop`
+## 4.6 Summary: Binary Footprint
 
-**Solution implemented:** By pre-padding the image array with a border of zeros (equal to half the kernel size), the inner loop becomes a pure, continuous arithmetic block with no branching. After this structural change, GCC successfully vectorized the convolution inner loop, confirming:
+This table tracks the `.text` segment size across all optimization flags to visualize the binary impact of different compilation strategies.
 
-> `vectorized N iterations`
-
-The disassembly (via `riscv64-unknown-elf-objdump -d binary | grep -c vset`) confirmed the presence of `vsetvli` instructions in the auto-vectorized binary, validating that the compiler emitted RVV instructions.
+| Optimization Flag | Binary Code Size (`.text` bytes) |
+| --- | --- |
+| `-O0` | 1,517,968 |
+| `-O2` | 1,208,313 |
+| `-O3` | 1,208,897 |
+| `-Ofast` | 1,208,925 |
+| `-Os` | 1,208,633 |
 
 ---
 

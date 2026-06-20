@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <time.h>
 
-/** 
+/**
  * CHANGE THESE TO CONFIGURE THE RUN
  *
  * LMUL_SWEEP   RVV LMUL factor  (1, 2, 4)
@@ -22,14 +22,13 @@
  *              2 -> Sobel only
  *              3 -> Magnitude L1 only
  *              4 -> Magnitude L2 only
- *              5 -> Direction only   
- *              6 -> Full pipeline    
+ *              5 -> Direction only
+ *              6 -> Full pipeline
  *
  * Scalar vs RVV is controlled by the Makefile -march flag
  *              bench-scalar-O3  ->  -march=rv64gc   (__riscv_v undefined)
  *              bench-rvv-O3     ->  -march=rv64gcv  (__riscv_v defined)
- *
-**/
+ */
 #define LMUL_SWEEP   1
 #define PIPELINE_SEL 3
 
@@ -53,7 +52,6 @@ static double elapsed_ms(struct timespec s, struct timespec e)
     GEM5_DUMP_STATS();                                            \
     clock_gettime(CLOCK_MONOTONIC, &t1);                          \
     printf("[TIME     ]: %-24s %.3f ms\n", label, elapsed_ms(t0, t1));
-
 
 /* Allocate a fresh metadata copy of an image */
 static image::io::metadata_t<uint8_t> make_copy(const image::io::metadata_t<uint8_t>& src)
@@ -87,9 +85,9 @@ int main()
 
     auto* gx = static_cast<int16_t*>(utils::memory::aligned_alloc(64, n * sizeof(int16_t)));
     auto* gy = static_cast<int16_t*>(utils::memory::aligned_alloc(64, n * sizeof(int16_t)));
-    if (!gx || !gy) 
-    { 
-        printf("[ERROR    ]: alloc failed\n"); 
+    if (!gx || !gy)
+    {
+        printf("[ERROR    ]: alloc failed\n");
         return 1;
     }
 
@@ -110,15 +108,15 @@ int main()
     {
         auto blurred = make_copy(image);
         std::copy_n(image.buffer.get(), n, blurred.buffer.get());
-        (void)processing::separable_5x5<uint8_t, int32_t, LMUL_SWEEP>(blurred);
+        (void)processing::gaussian::separable_5x5<uint8_t, int32_t, LMUL_SWEEP>(blurred);
 
 #if PIPELINE_SEL == 3 || PIPELINE_SEL == 4 || PIPELINE_SEL == 5
-        (void)processing::spatial_3x3<LMUL_SWEEP>(blurred, gx, gy);
+        (void)processing::sobel::spatial_3x3<LMUL_SWEEP>(blurred, gx, gy);
 #endif
 
 #if PIPELINE_SEL == 2
         BENCH("Sobel Filter",
-            (void)processing::spatial_3x3<LMUL_SWEEP>(blurred, gx, gy);
+            (void)processing::sobel::spatial_3x3<LMUL_SWEEP>(blurred, gx, gy);
         )
 #endif
 
@@ -126,7 +124,7 @@ int main()
         {
             auto mag = make_copy(image);
             BENCH("Magnitude L1",
-            (void)processing::l1<uint8_t, int16_t, uint16_t, LMUL_SWEEP>(mag, gx, gy);
+                (void)processing::gradient::l1<uint8_t, int16_t, uint16_t, LMUL_SWEEP>(mag, gx, gy);
             )
         }
 #endif
@@ -135,7 +133,7 @@ int main()
         {
             auto mag = make_copy(image);
             BENCH("Magnitude L2",
-                (void)processing::l2(mag, gx, gy);
+                (void)processing::gradient::l2(mag, gx, gy);
             )
         }
 #endif
@@ -145,9 +143,13 @@ int main()
             auto dir = make_copy(image);
             auto* gx32 = static_cast<int32_t*>(utils::memory::aligned_alloc(64, n * sizeof(int32_t)));
             auto* gy32 = static_cast<int32_t*>(utils::memory::aligned_alloc(64, n * sizeof(int32_t)));
-            for (size_t i = 0; i < n; ++i) { gx32[i] = gx[i]; gy32[i] = gy[i]; }
+            for (size_t i = 0; i < n; ++i)
+            {
+                gx32[i] = gx[i];
+                gy32[i] = gy[i];
+            }
             BENCH("Direction",
-                (void)processing::direction(dir, gx32, gy32);
+                (void)processing::gradient::direction(dir, gx32, gy32);
             )
             std::free(gx32);
             std::free(gy32);
@@ -161,7 +163,7 @@ int main()
         auto img_copy = make_copy(image);
         BENCH("Gaussian spatial",
             std::copy_n(image.buffer.get(), n, img_copy.buffer.get());
-            (void)processing::spatial_5x5(img_copy);
+            (void)processing::gaussian::spatial_5x5(img_copy);
         )
     }
 #endif
@@ -171,7 +173,7 @@ int main()
         auto img_copy = make_copy(image);
         BENCH("Gaussian separable",
             std::copy_n(image.buffer.get(), n, img_copy.buffer.get());
-            (void)processing::separable_5x5<uint8_t, int32_t, LMUL_SWEEP>(img_copy);
+            (void)processing::gaussian::separable_5x5<uint8_t, int32_t, LMUL_SWEEP>(img_copy);
         )
     }
 #endif
@@ -186,11 +188,15 @@ int main()
 
         BENCH("Full pipeline",
             std::copy_n(image.buffer.get(), n, blurred.buffer.get());
-            (void)processing::separable_5x5<uint8_t, int32_t, LMUL_SWEEP>(blurred);
-            (void)processing::spatial_3x3<LMUL_SWEEP>(blurred, gx, gy);
-            (void)processing::l1(mag, gx, gy);
-            for (size_t i = 0; i < n; ++i) { gx32[i] = gx[i]; gy32[i] = gy[i]; }
-            (void)processing::direction(dir, gx32, gy32);
+            (void)processing::gaussian::separable_5x5<uint8_t, int32_t, LMUL_SWEEP>(blurred);
+            (void)processing::sobel::spatial_3x3<LMUL_SWEEP>(blurred, gx, gy);
+            (void)processing::gradient::l1(mag, gx, gy);
+            for (size_t i = 0; i < n; ++i)
+            {
+                gx32[i] = gx[i];
+                gy32[i] = gy[i];
+            }
+            (void)processing::gradient::direction(dir, gx32, gy32);
         )
 
         std::free(gx32);
@@ -202,4 +208,3 @@ int main()
     std::free(gy);
     return 0;
 }
-

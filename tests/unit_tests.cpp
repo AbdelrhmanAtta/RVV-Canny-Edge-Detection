@@ -12,12 +12,12 @@
 #include "gaussian.hpp"
 #include "sobel.hpp"
 #include "gradient.hpp"
-#include "nms.hpp" 
+#include "nms.hpp"
 #include "double_thresholding.hpp"
 #include "hysteresis.hpp"
 
 template <typename T>
-image::io::metadata_t<T> allocate_image(uint32_t w, uint32_t h) 
+image::io::metadata_t<T> allocate_image(uint32_t w, uint32_t h)
 {
     image::io::metadata_t<T> img;
     img.width = w;
@@ -29,27 +29,28 @@ image::io::metadata_t<T> allocate_image(uint32_t w, uint32_t h)
     return img;
 }
 
-TEST (CannyPipeline, ProcessAndSaveAllImages) 
+TEST(CannyPipeline, ProcessAndSaveAllImages)
 {
     std::vector<std::string> bases = {
-        "circ", "diag", "diag_inv", "full_black", "full_white", 
+        "circ", "diag", "diag_inv", "full_black", "full_white",
         "half_bw", "horiz", "quad_bw", "rect", "vert"
     };
     std::vector<std::pair<uint32_t, uint32_t>> dims = {
         {312, 444}, {512, 512}, {600, 400}
     };
 
-    for(const auto& base : bases) {
-        for(const auto& [w, h] : dims) {
+    for (const auto& base : bases)
+    {
+        for (const auto& [w, h] : dims)
+        {
             std::string base_name = base + std::to_string(w) + "x" + std::to_string(h);
             std::string src = base_name + ".raw";
-            
-            std::string prefix = "google_" + base_name; 
+
+            std::string prefix = "google_" + base_name;
 
             auto img_orig = allocate_image<uint8_t>(w, h);
-            if(image::io::load_raw<uint8_t>(src, img_orig) != Status::E_OK) {
+            if (image::io::load_raw<uint8_t>(src, img_orig) != Status::E_OK)
                 continue;
-            }
 
             auto img_spatial = allocate_image<uint8_t>(w, h);
             std::memcpy(img_spatial.buffer.get(), img_orig.buffer.get(), img_orig.pixel_count);
@@ -96,7 +97,8 @@ TEST (CannyPipeline, ProcessAndSaveAllImages)
     }
 }
 
-TEST(CannyGaussian, UniformImage) {
+TEST(CannyGaussian, UniformImage)
+{
     const uint32_t dim = 128;
     auto img = allocate_image<uint8_t>(dim, dim);
     std::memset(img.buffer.get(), 128, img.pixel_count);
@@ -106,15 +108,18 @@ TEST(CannyGaussian, UniformImage) {
 
     const uint8_t expected_val = 135;
 
-    for (uint32_t y = 2; y < dim - 2; ++y) {
-        for (uint32_t x = 2; x < dim - 2; ++x) {
+    for (uint32_t y = 2; y < dim - 2; ++y)
+    {
+        for (uint32_t x = 2; x < dim - 2; ++x)
+        {
             uint8_t val = img.buffer.get()[y * dim + x];
             EXPECT_NEAR(val, expected_val, 1);
         }
     }
 }
 
-TEST(CannyGaussian, AllBlackImage) {
+TEST(CannyGaussian, AllBlackImage)
+{
     const uint32_t dim = 128;
     auto img = allocate_image<uint8_t>(dim, dim);
     std::memset(img.buffer.get(), 0, img.pixel_count);
@@ -122,12 +127,12 @@ TEST(CannyGaussian, AllBlackImage) {
     Status stat = processing::gaussian::separable_5x5(img);
     EXPECT_EQ(stat, Status::E_OK);
 
-    for (size_t i = 0; i < img.pixel_count; ++i) {
+    for (size_t i = 0; i < img.pixel_count; ++i)
         EXPECT_EQ(img.buffer.get()[i], 0);
-    }
 }
 
-TEST(CannyGaussian, ImpulseSymmetry) {
+TEST(CannyGaussian, ImpulseSymmetry)
+{
     const uint32_t dim = 128;
     auto img = allocate_image<uint8_t>(dim, dim);
     std::memset(img.buffer.get(), 0, img.pixel_count);
@@ -140,27 +145,30 @@ TEST(CannyGaussian, ImpulseSymmetry) {
     EXPECT_EQ(stat, Status::E_OK);
 
     uint8_t* ptr = img.buffer.get();
-    
+
     EXPECT_EQ(ptr[cy * dim + (cx - 1)], ptr[cy * dim + (cx + 1)]);
     EXPECT_EQ(ptr[cy * dim + (cx - 2)], ptr[cy * dim + (cx + 2)]);
-    
+
     EXPECT_EQ(ptr[(cy - 1) * dim + cx], ptr[(cy + 1) * dim + cx]);
     EXPECT_EQ(ptr[(cy - 2) * dim + cx], ptr[(cy + 2) * dim + cx]);
 }
 
-TEST(CannySobel, UniformImage) {
+TEST(CannySobel, UniformImage)
+{
     const uint32_t dim = 128;
     auto img = allocate_image<uint8_t>(dim, dim);
     auto gx  = allocate_image<int16_t>(dim, dim);
     auto gy  = allocate_image<int16_t>(dim, dim);
-    
+
     std::memset(img.buffer.get(), 128, img.pixel_count);
 
     Status stat = processing::sobel::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
     EXPECT_EQ(stat, Status::E_OK);
 
-    for (uint32_t y = 1; y < dim - 1; ++y) {
-        for (uint32_t x = 1; x < dim - 1; ++x) {
+    for (uint32_t y = 1; y < dim - 1; ++y)
+    {
+        for (uint32_t x = 1; x < dim - 1; ++x)
+        {
             size_t idx = y * dim + x;
             EXPECT_EQ(gx.buffer.get()[idx], 0);
             EXPECT_EQ(gy.buffer.get()[idx], 0);
@@ -168,87 +176,94 @@ TEST(CannySobel, UniformImage) {
     }
 }
 
-TEST(CannySobel, VerticalEdge) {
+TEST(CannySobel, VerticalEdge)
+{
     const uint32_t dim = 128;
     auto img = allocate_image<uint8_t>(dim, dim);
     auto gx  = allocate_image<int16_t>(dim, dim);
     auto gy  = allocate_image<int16_t>(dim, dim);
 
-    for (uint32_t y = 0; y < dim; ++y) {
-        for (uint32_t x = 0; x < dim; ++x) {
+    for (uint32_t y = 0; y < dim; ++y)
+    {
+        for (uint32_t x = 0; x < dim; ++x)
             img.buffer.get()[y * dim + x] = (x < dim / 2) ? 0 : 255;
-        }
     }
 
     Status stat = processing::sobel::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
     EXPECT_EQ(stat, Status::E_OK);
 
     const uint32_t edge_x = dim / 2;
-    for (uint32_t y = 1; y < dim - 1; ++y) {
+    for (uint32_t y = 1; y < dim - 1; ++y)
+    {
         size_t idx = y * dim + edge_x;
         EXPECT_GT(std::abs(gx.buffer.get()[idx]), 0);
         EXPECT_EQ(gy.buffer.get()[idx], 0);
     }
 }
 
-TEST(CannySobel, HorizontalEdge) {
+TEST(CannySobel, HorizontalEdge)
+{
     const uint32_t dim = 128;
     auto img = allocate_image<uint8_t>(dim, dim);
     auto gx  = allocate_image<int16_t>(dim, dim);
     auto gy  = allocate_image<int16_t>(dim, dim);
 
-    for (uint32_t y = 0; y < dim; ++y) {
-        for (uint32_t x = 0; x < dim; ++x) {
+    for (uint32_t y = 0; y < dim; ++y)
+    {
+        for (uint32_t x = 0; x < dim; ++x)
             img.buffer.get()[y * dim + x] = (y < dim / 2) ? 0 : 255;
-        }
     }
 
     Status stat = processing::sobel::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
     EXPECT_EQ(stat, Status::E_OK);
 
     const uint32_t edge_y = dim / 2;
-    for (uint32_t x = 1; x < dim - 1; ++x) {
+    for (uint32_t x = 1; x < dim - 1; ++x)
+    {
         size_t idx = edge_y * dim + x;
         EXPECT_EQ(gx.buffer.get()[idx], 0);
         EXPECT_GT(std::abs(gy.buffer.get()[idx]), 0);
     }
 }
 
-TEST(CannySobel, DiagonalEdge) {
+TEST(CannySobel, DiagonalEdge)
+{
     const uint32_t dim = 128;
     auto img = allocate_image<uint8_t>(dim, dim);
     auto gx  = allocate_image<int16_t>(dim, dim);
     auto gy  = allocate_image<int16_t>(dim, dim);
 
-    for (uint32_t y = 0; y < dim; ++y) {
-        for (uint32_t x = 0; x < dim; ++x) {
+    for (uint32_t y = 0; y < dim; ++y)
+    {
+        for (uint32_t x = 0; x < dim; ++x)
             img.buffer.get()[y * dim + x] = (x > y) ? 255 : 0;
-        }
     }
 
     Status stat = processing::sobel::spatial_3x3(img, gx.buffer.get(), gy.buffer.get());
     EXPECT_EQ(stat, Status::E_OK);
 
-    for (uint32_t i = 1; i < dim - 1; ++i) {
+    for (uint32_t i = 1; i < dim - 1; ++i)
+    {
         size_t idx = i * dim + i;
         EXPECT_GT(std::abs(gx.buffer.get()[idx]), 0);
         EXPECT_GT(std::abs(gy.buffer.get()[idx]), 0);
     }
 }
 
-TEST(CannyDirection, EdgeAngles) {
+TEST(CannyDirection, EdgeAngles)
+{
     const uint32_t dim = 128;
     auto gx  = allocate_image<int16_t>(dim, dim);
     auto gy  = allocate_image<int16_t>(dim, dim);
     auto dir = allocate_image<uint8_t>(dim, dim);
 
-    gx.buffer.get()[0] = 255; 
+    gx.buffer.get()[0] = 255;
     gy.buffer.get()[0] = 0;
 
-    gx.buffer.get()[1] = 0; 
+    gx.buffer.get()[1] = 0;
     gy.buffer.get()[1] = 255;
 
-    gx.buffer.get()[2] = 255; 
+    gx.buffer.get()[2] = 255;
     gy.buffer.get()[2] = 255;
 
     Status stat = processing::gradient::direction(dir, gx.buffer.get(), gy.buffer.get());
@@ -259,23 +274,27 @@ TEST(CannyDirection, EdgeAngles) {
     EXPECT_EQ(dir.buffer.get()[2], 135);
 }
 
-TEST(CannyMagnitude, NonZeroOutput) {
+TEST(CannyMagnitude, NonZeroOutput)
+{
     const uint32_t dim = 128;
     auto gx  = allocate_image<int16_t>(dim, dim);
     auto gy  = allocate_image<int16_t>(dim, dim);
     auto mag = allocate_image<uint8_t>(dim, dim);
 
-    for (size_t i = 0; i < gx.pixel_count; ++i) {
-        gx.buffer.get()[i] = (i % 512) - 256; 
+    for (size_t i = 0; i < gx.pixel_count; ++i)
+    {
+        gx.buffer.get()[i] = (i % 512) - 256;
         gy.buffer.get()[i] = ((i * 3) % 512) - 256;
     }
 
     Status stat_l1 = processing::gradient::l1(mag, gx.buffer.get(), gy.buffer.get());
     EXPECT_EQ(stat_l1, Status::E_OK);
-    
+
     bool has_nonzero_l1 = false;
-    for (size_t i = 0; i < mag.pixel_count; ++i) {
-        if (mag.buffer.get()[i] > 0) {
+    for (size_t i = 0; i < mag.pixel_count; ++i)
+    {
+        if (mag.buffer.get()[i] > 0)
+        {
             has_nonzero_l1 = true;
             break;
         }
@@ -286,10 +305,12 @@ TEST(CannyMagnitude, NonZeroOutput) {
 
     Status stat_l2 = processing::gradient::l2(mag, gx.buffer.get(), gy.buffer.get());
     EXPECT_EQ(stat_l2, Status::E_OK);
-    
+
     bool has_nonzero_l2 = false;
-    for (size_t i = 0; i < mag.pixel_count; ++i) {
-        if (mag.buffer.get()[i] > 0) {
+    for (size_t i = 0; i < mag.pixel_count; ++i)
+    {
+        if (mag.buffer.get()[i] > 0)
+        {
             has_nonzero_l2 = true;
             break;
         }
@@ -297,7 +318,8 @@ TEST(CannyMagnitude, NonZeroOutput) {
     EXPECT_TRUE(has_nonzero_l2);
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
