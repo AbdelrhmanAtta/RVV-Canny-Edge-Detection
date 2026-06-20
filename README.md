@@ -15,13 +15,14 @@
 ## Table of Contents
 
 1. [Project Overview](#1-project-overview)
-2. [Theoretical Analysis](#2-theoretical-analysis)
-3. [Simulation Specifications](#3-simulation-specifications)
-4. [Compiler Optimization Sweep](#4-compiler-optimization-sweep)
-5. [Profiling & Hotspot Identification](#5-profiling--hotspot-identification-phase-5)
-6. [RVV Optimization Analysis](#6-rvv-optimization-analysis)
-7. [Summary Table: Optimization Progress](#7-summary-table-optimization-progress)
-8. [Resources & References](#8-resources--references)
+2. [Pipeline Examples](#2-pipeline-examples)
+3. [Theoretical Analysis](#3-theoretical-analysis)
+4. [Simulation Specifications](#4-simulation-specifications)
+5. [Compiler Optimization Sweep](#5-compiler-optimization-sweep)
+6. [Profiling & Hotspot Identification](#6-profiling--hotspot-identification-phase-5)
+7. [RVV Optimization Analysis](#7-rvv-optimization-analysis)
+8. [Summary Table: Optimization Progress](#8-summary-table-optimization-progress)
+9. [Resources & References](#9-resources--references)
 
 ---
 
@@ -41,7 +42,7 @@ The development followed a structured embedded engineering workflow: scalar base
 
 * **Environment:** WSL2 (Ubuntu 24.04) or Arch Linux.
 * **Toolchain:** `riscv64-linux-gnu-g++` (configured with `--with-arch=rv64gcv`).
-* **Emulation:** gem5, using a custom `tools/run_gem5.py` configuration with `TimingSimpleCPU` (see Section 3 for the full hardware model).
+* **Emulation:** gem5, using a custom `tools/run_gem5.py` configuration with `TimingSimpleCPU` (see Section 4 for the full hardware model).
 * **Testing:** GoogleTest for host-side logic and assert-based testing for target emulation.
 * **Documentation:** Doxygen.
 
@@ -120,9 +121,27 @@ make bench-rvv-O3               # Run the RVV benchmark at a specific optimizati
 
 ---
 
-## 2. Theoretical Analysis
+## 2. Pipeline Examples
 
-### 2.1 Separable Filters vs. Spatial Convolution
+Visual output of each stage, run on a 512×512 input image.
+
+| Greyscale Input | Gaussian Blur | Sobel Gx |
+| :---: | :---: | :---: |
+| ![Greyscale](examples/greyscale.png) | ![Blurred](examples/blurred.png) | ![Sobel Gx](examples/sobel_gx.png) |
+
+| Sobel Gy | Gradient Magnitude | Gradient Direction |
+| :---: | :---: | :---: |
+| ![Sobel Gy](examples/sobel_gy.png) | ![Magnitude](examples/mag.png) | ![Direction](examples/dir.png) |
+
+| Non-Maximum Suppression | Double Threshold | Hysteresis (Final) |
+| :---: | :---: | :---: |
+| ![NMS](examples/nms.png) | ![Threshold](examples/threshold.png) | ![Hysteresis](examples/hyst.png) |
+
+---
+
+## 3. Theoretical Analysis
+
+### 3.1 Separable Filters vs. Spatial Convolution
 
 A standard 5×5 spatial convolution requires **25 multiply-accumulate (MAC) operations** per pixel. Decomposing this into a separable filter — a 1×5 horizontal pass followed by a 5×1 vertical pass — reduces the count to **10 MACs per pixel**, a 60% arithmetic reduction.
 
@@ -137,7 +156,7 @@ The separable filter was approximately **2.2× faster** under unoptimized compil
 
 **Architectural Caveat:** On physical silicon, the vertical 5×1 pass requires strided memory access (jumping by the full row width for each element). This breaks spatial locality and can cause significant L1 cache thrashing. Our gem5 results suggest that in this specific simulation configuration — with a 64 kB L1 data cache and -O0's already-inflated memory traffic — the arithmetic savings outweigh the cache penalty. This relationship would likely shift at higher optimization levels or on cache-constrained real hardware.
 
-### 2.2 Sobel Output Data Types
+### 3.2 Sobel Output Data Types
 
 For an 8-bit input image (pixel values 0–255), the maximum theoretical output of the Sobel-X kernel `[-1, 0, 1; -2, 0, 2; -1, 0, 1]` occurs when all positive weights align with 255 and all negative weights align with 0:
 
@@ -146,7 +165,7 @@ For an 8-bit input image (pixel values 0–255), the maximum theoretical output 
 
 The absolute range is `[-1020, 1020]`, which fits comfortably within **`int16_t`** (range `[-32768, 32767]`). Using `int16_t` instead of `int32_t` halves memory bandwidth for the Gx and Gy buffers, which benefits both cache utilization and SIMD load efficiency in later RVV stages.
 
-### 2.3 Magnitude Normalization Strategy
+### 3.3 Magnitude Normalization Strategy
 
 Normalizing gradient magnitudes to `[0, 255]` requires dividing every pixel's magnitude by the global maximum found in the image. A single-pass approach is not feasible because:
 
@@ -155,7 +174,7 @@ Normalizing gradient magnitudes to `[0, 255]` requires dividing every pixel's ma
 
 A **two-pass algorithm** is therefore strictly necessary: one pass to find the global maximum (a reduction), and a second pass to apply the normalization. This is why the RVV Magnitude stage includes a vector reduction (`__riscv_vredmax`) before the normalization loop.
 
-### 2.4 gem5 Benchmarking Methodology
+### 3.4 gem5 Benchmarking Methodology
 
 Standard QEMU user-mode is an **instruction translator**, not a cycle-accurate simulator. It does not model cache latency, branch prediction, or pipeline stalls. Absolute wall-clock times from QEMU are volatile and strongly influenced by host OS scheduling.
 
@@ -169,7 +188,7 @@ This project uses **gem5 with `TimingSimpleCPU`**, which provides a deterministi
 
 Because gem5 simulates the full memory hierarchy (L1/L2 caches, DDR4 latency), it can reveal penalties like cache misses and memory bottlenecks that QEMU would hide. Relative comparisons between optimization levels are valid and meaningful.
 
-### 2.5 Amdahl's Law & Profiling Strategy
+### 3.5 Amdahl's Law & Profiling Strategy
 
 Amdahl's Law states that the maximum achievable speedup of a system is strictly limited by the fraction of execution time that can be optimized. From our `-O3` profiling, the pipeline time is distributed as follows (separable Gaussian + Sobel + Magnitude L1 + Direction):
 
@@ -184,7 +203,7 @@ Convolutions (Gaussian + Sobel) account for approximately **62.2%** of total run
 
 ---
 
-## 3. Simulation Specifications
+## 4. Simulation Specifications
 
 All benchmarks were executed using a custom `tools/run_gem5.py` configuration with the following hardware model:
 
@@ -197,11 +216,11 @@ All benchmarks were executed using a custom `tools/run_gem5.py` configuration wi
 
 ---
 
-## 4. Compiler Optimization Sweep
+## 5. Compiler Optimization Sweep
 
 All scalar pipeline stages were measured at five distinct optimization levels to establish a baseline for our manual RVV implementation. Image resolution: 512×512 pixels.
 
-### 4.1 `-O0` (No Optimization)
+### 5.1 `-O0` (No Optimization)
 
 | Pipeline Stage | Time (ms) | Cycle Count | Instructions (simInsts) | CPI |
 | --- | --- | --- | --- | --- |
@@ -213,7 +232,7 @@ All scalar pipeline stages were measured at five distinct optimization levels to
 | Direction | 47.655 | 143,163,659 | 66,696,756 | 2.146 |
 | **Full Pipeline** | **944.017** | **2,834,883,243** | **1,407,297,719** | **2.014** |
 
-### 4.2 `-O2` (Standard Optimization)
+### 5.2 `-O2` (Standard Optimization)
 
 | Pipeline Stage | Time (ms) | Cycle Count | Instructions (simInsts) | CPI |
 | --- | --- | --- | --- | --- |
@@ -225,7 +244,7 @@ All scalar pipeline stages were measured at five distinct optimization levels to
 | Direction | 6.185 | 18,573,534 | 7,843,761 | 2.369 |
 | **Full Pipeline** | **42.783** | **128,475,893** | **61,183,891** | **2.101** |
 
-### 4.3 `-O3` (Aggressive Optimization)
+### 5.3 `-O3` (Aggressive Optimization)
 
 | Pipeline Stage | Time (ms) | Cycle Count | Instructions (simInsts) | CPI |
 | --- | --- | --- | --- | --- |
@@ -237,7 +256,7 @@ All scalar pipeline stages were measured at five distinct optimization levels to
 | Direction | 6.031 | 18,111,234 | 7,839,699 | 2.310 |
 | **Full Pipeline** | **34.580** | **103,843,265** | **45,962,824** | **2.259** |
 
-### 4.4 `-Ofast` (Fast Math Compliance)
+### 5.4 `-Ofast` (Fast Math Compliance)
 
 | Pipeline Stage | Time (ms) | Cycle Count | Instructions (simInsts) | CPI |
 | --- | --- | --- | --- | --- |
@@ -249,7 +268,7 @@ All scalar pipeline stages were measured at five distinct optimization levels to
 | Direction | 6.026 | 18,096,362 | 7,839,699 | 2.308 |
 | **Full Pipeline** | **34.605** | **103,970,900** | **45,967,791** | **2.262** |
 
-### 4.5 `-Os` (Size Optimization)
+### 5.5 `-Os` (Size Optimization)
 
 | Pipeline Stage | Time (ms) | Cycle Count | Instructions (simInsts) | CPI |
 | --- | --- | --- | --- | --- |
@@ -261,7 +280,7 @@ All scalar pipeline stages were measured at five distinct optimization levels to
 | Direction | 5.693 | 17,096,199 | 7,692,625 | 2.222 |
 | **Full Pipeline** | **50.994** | **153,134,155** | **70,729,387** | **2.165** |
 
-### 4.6 Summary: Binary Footprint
+### 5.6 Summary: Binary Footprint
 
 This table tracks the `.text` segment size across all optimization flags to visualize the binary impact of different compilation strategies.
 
@@ -275,7 +294,7 @@ This table tracks the `.text` segment size across all optimization flags to visu
 
 ---
 
-## 5. Profiling & Hotspot Identification (Phase 5)
+## 6. Profiling & Hotspot Identification (Phase 5)
 
 Using `clock_gettime(CLOCK_MONOTONIC)` wrappers around each pipeline stage (100+ iterations for stability) under `-O3`, the runtime breakdown for the standard pipeline (Separable Gaussian + Sobel + Magnitude L1 + Direction) is:
 
@@ -292,9 +311,9 @@ Direction computation (20.0%) is a tempting target by time share, but its comput
 
 ---
 
-## 6. RVV Optimization Analysis
+## 7. RVV Optimization Analysis
 
-### 6.1 LMUL (Vector Length Multiplier) Sweeps
+### 7.1 LMUL (Vector Length Multiplier) Sweeps
 
 *This test evaluates the performance impact of grouping vector registers (LMUL). Higher LMUL values process more elements per instruction but increase register pressure, which can lead to spilling if the compiler runs out of architectural registers. It also increases pressure on the memory subsystem.*
 
@@ -304,7 +323,7 @@ Direction computation (20.0%) is a tempting target by time share, but its comput
 * **VLEN:** 256 bits
 * **Target Stages:** Gaussian Separable Pass, Sobel Filter, Magnitude L1
 
-#### 6.1.1 Gaussian Separable Filter
+#### 7.1.1 Gaussian Separable Filter
 
 | LMUL Setting | Time (ms) | Cycle Count | Instructions (simInsts) | CPI |
 | --- | --- | --- | --- | --- |
@@ -312,7 +331,7 @@ Direction computation (20.0%) is a tempting target by time share, but its comput
 | **LMUL = 2** | **2.748** | **8,250,477** | 765,527 | 10.778 |
 | **LMUL = 4** | 2.760 | 8,289,203 | 769,142 | 10.777 |
 
-#### 6.1.2 Sobel Filter
+#### 7.1.2 Sobel Filter
 
 | LMUL Setting | Time (ms) | Cycle Count | Instructions (simInsts) | CPI |
 | --- | --- | --- | --- | --- |
@@ -320,7 +339,7 @@ Direction computation (20.0%) is a tempting target by time share, but its comput
 | **LMUL = 2** | **0.579** | **1,738,989** | 407,694 | 4.265 |
 | **LMUL = 4** | 0.652 | 1,956,711 | 340,374 | 5.749 |
 
-#### 6.1.3 Magnitude L1
+#### 7.1.3 Magnitude L1
 
 | LMUL Setting | Time (ms) | Cycle Count | Instructions (simInsts) | CPI |
 | --- | --- | --- | --- | --- |
@@ -328,7 +347,7 @@ Direction computation (20.0%) is a tempting target by time share, but its comput
 | **LMUL = 2** | 0.586 | 1,760,868 | 344,809 | 5.107 |
 | **LMUL = 4** | **0.509** | **1,526,675** | 172,777 | 8.836 |
 
-### 6.2 Sweep Analysis
+### 7.2 Sweep Analysis
 
 **The Memory & Register Wall (`LMUL=4`)**
 Pushing the vector grouping to `LMUL=4` degrades execution time for the Sobel stage and causes diminishing returns on the Gaussian stage, exposing hardware limits:
@@ -344,7 +363,7 @@ For the sliding window convolutions (Gaussian and Sobel), transitioning from `LM
 
 ---
 
-## 7. Summary Table: Optimization Progress
+## 8. Summary Table: Optimization Progress
 
 The following table summarizes the execution time (in ms) and binary size across all optimization phases.
 
@@ -358,7 +377,7 @@ The following table summarizes the execution time (in ms) and binary size across
 
 > *Note: RVV metrics represent the optimal LMUL setting for each specific stage (Sobel/Gaussian = LMUL=2; Magnitude = LMUL=4). Direction computation remained scalar across all RVV tests.*
 
-### 7.1 Analysis of Results
+### 8.1 Analysis of Results
 
 1. **The Auto-Vectorization Plateau:** Moving from `-O2` to `-O3` (Auto-vec) provided significant speedups for the Gaussian and Magnitude stages, but the binary size reduction at `-O3` reflects the compiler's ability to prune dead code and inline aggressively.
 2. **VLEN Sensitivity:** The introduction of RVV intrinsics provided an order-of-magnitude leap in performance. However, comparing `VLEN=128` to `VLEN=256` shows that the performance is not strictly linear; memory access patterns and the overhead of the strip-mining loop mean that doubling the vector length provides roughly a 15–30% performance gain rather than a 2× speedup.
@@ -367,7 +386,7 @@ The following table summarizes the execution time (in ms) and binary size across
 
 ---
 
-## 8. Resources & References
+## 9. Resources & References
 
 * [Computer Vision: Filters](https://www.youtube.com/watch?v=C_zFhWdM4ic&list=PLzH6n4zXuckoRdljSlM2k35BufTYXNNeF)
 * [RISC-V Vector Quick Intro](https://blog.timhutt.co.uk/riscv-vector/#the-end)
